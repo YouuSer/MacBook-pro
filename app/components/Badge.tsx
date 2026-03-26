@@ -1,18 +1,17 @@
 interface BadgeProps {
-  variant: "new" | "discount" | "chip";
+  variant: "new" | "discount";
   children: React.ReactNode;
 }
 
 const styles: Record<BadgeProps["variant"], string> = {
-  new: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  discount: "bg-green-500/20 text-green-400 border-green-500/30",
-  chip: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  new: "bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent-soft)]",
+  discount: "bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-500/30",
 };
 
 export function Badge({ variant, children }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${styles[variant]}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${styles[variant]}`}
     >
       {children}
     </span>

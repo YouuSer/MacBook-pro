@@ -1,19 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --card: #141414;
-  --card-hover: #1a1a1a;
-  --border: #2a2a2a;
-  --muted: #888;
-  --accent: #22c55e;
-  --accent-muted: #16a34a;
-  --badge-new: #3b82f6;
+  --background: #f4f6f8;
+  --foreground: #121a23;
+  --surface: #ffffff;
+  --surface-strong: #eff3f6;
+  --border: #d8e0e7;
+  --text-subtle: #64748b;
+  --accent: #0f766e;
+  --accent-soft: #d8efe9;
+  --image-bg: #ffffff;
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #d8e0e7;
+  --chart-axis: #64748b;
+  --card: var(--surface);
+  --card-hover: #f6f8fa;
+  --muted: var(--text-subtle);
+}
+
+[data-theme="dark"] {
+  --background: #0e141d;
+  --foreground: #e6edf5;
+  --surface: #161f2b;
+  --surface-strong: #1e2937;
+  --border: #2f3e51;
+  --text-subtle: #95a7ba;
+  --accent: #49b9ae;
+  --accent-soft: #1e3f44;
+  --image-bg: #ffffff;
+  --tooltip-bg: #161f2b;
+  --tooltip-border: #2f3e51;
+  --chart-axis: #95a7ba;
+  --card: var(--surface);
+  --card-hover: #1c2735;
+  --muted: var(--text-subtle);
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 500px at 5% -10%, rgb(15 118 110 / 0.14), transparent 60%),
+    radial-gradient(900px 420px at 100% 0%, rgb(18 26 35 / 0.1), transparent 58%),
+    var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: "Avenir Next", "Inter Tight", "Segoe UI", "Helvetica Neue", sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
