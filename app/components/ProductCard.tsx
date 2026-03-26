@@ -106,6 +106,20 @@ export function ProductCard({
           height={200}
           className="h-40 object-contain"
         />
+        {isBestDeal && (
+          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/65 bg-emerald-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm shadow-emerald-500/35">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
+            </svg>
+            <span>Meilleur deal</span>
+          </div>
+        )}
         <div className="absolute top-3 right-3 rounded-full ring-2 ring-white/90 dark:ring-slate-900/80">
           <Badge variant="discount">-{product.savingsPercent.toFixed(0)}%</Badge>
         </div>
