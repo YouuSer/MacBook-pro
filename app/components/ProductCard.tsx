@@ -7,15 +7,7 @@ import { PriceHistoryChart } from "./PriceHistoryChart";
 
 interface ProductCardProps {
   product: Product;
-  specDiffFlags: SpecDiffFlags;
   isBestDeal?: boolean;
-}
-
-export interface SpecDiffFlags {
-  chip: boolean;
-  memory: boolean;
-  storage: boolean;
-  screen: boolean;
 }
 
 const SCREEN_LABELS: Record<string, string> = {
@@ -50,24 +42,16 @@ function normalizeScreenSize(value: string): string {
 function SpecRailRow({
   label,
   value,
-  diff,
 }: {
   label: string;
   value: string;
-  diff: boolean;
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-subtle)]">
         {label}
       </span>
-      <span
-        className={`inline-flex min-w-[72px] justify-center rounded-md border px-2.5 py-1 text-xs font-semibold ${
-          diff
-            ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
-            : "border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)]"
-        }`}
-      >
+      <span className="inline-flex min-w-[72px] justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--foreground)]">
         {value}
       </span>
     </div>
@@ -76,7 +60,6 @@ function SpecRailRow({
 
 export function ProductCard({
   product,
-  specDiffFlags,
   isBestDeal = false,
 }: ProductCardProps) {
   const [showHistory, setShowHistory] = useState(false);
@@ -140,10 +123,10 @@ export function ProductCard({
 
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3">
           <div className="space-y-2">
-            <SpecRailRow label="Puce" value={chipValue} diff={specDiffFlags.chip} />
-            <SpecRailRow label="Memoire" value={memoryValue} diff={specDiffFlags.memory} />
-            <SpecRailRow label="Stockage" value={storageValue} diff={specDiffFlags.storage} />
-            <SpecRailRow label="Ecran" value={screenValue} diff={specDiffFlags.screen} />
+            <SpecRailRow label="Puce" value={chipValue} />
+            <SpecRailRow label="Memoire" value={memoryValue} />
+            <SpecRailRow label="Stockage" value={storageValue} />
+            <SpecRailRow label="Ecran" value={screenValue} />
           </div>
         </div>
 
