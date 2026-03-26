@@ -4,6 +4,7 @@ import { desc } from "drizzle-orm";
 import type { Product } from "@/lib/types";
 import { StatsBar } from "./components/StatsBar";
 import { ProductGrid } from "./components/ProductGrid";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -51,13 +52,16 @@ export default async function Home() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold">
-          MacBook Pro Refurb
-        </h1>
-        <p className="text-[var(--muted)] mt-1">
-          MacBook Pro reconditionnés avec puces Pro sur le store Apple France
-        </p>
+      <header className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">
+            MacBook Pro Refurb
+          </h1>
+          <p className="text-[var(--muted)] mt-1">
+            MacBook Pro reconditionnés avec puces Pro sur le store Apple France
+          </p>
+        </div>
+        <ThemeToggle />
       </header>
 
       <StatsBar products={allProducts} lastScrapedAt={lastScrapedAt} />

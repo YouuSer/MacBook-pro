@@ -7,13 +7,23 @@ export const metadata: Metadata = {
     "Surveillez les MacBook Pro reconditionnés sur le store Apple France",
 };
 
+const themeScript = `
+  (function() {
+    var theme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-screen antialiased">{children}</body>
     </html>
   );

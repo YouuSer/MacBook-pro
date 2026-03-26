@@ -68,7 +68,7 @@ function StatCard({
             ? "text-blue-400"
             : accent
               ? "text-green-400"
-              : "text-white"
+              : "text-[var(--foreground)]"
         }`}
       >
         {value}

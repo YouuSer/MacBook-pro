@@ -17,12 +17,41 @@ interface PriceHistoryChartProps {
   originalPrice: number;
 }
 
+function getCssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 export function PriceHistoryChart({
   partNumber,
   originalPrice,
 }: PriceHistoryChartProps) {
   const [data, setData] = useState<PriceHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [colors, setColors] = useState({
+    axis: "#888",
+    tooltipBg: "#1a1a1a",
+    tooltipBorder: "#333",
+  });
+
+  useEffect(() => {
+    const updateColors = () => {
+      setColors({
+        axis: getCssVar("--chart-axis") || "#888",
+        tooltipBg: getCssVar("--tooltip-bg") || "#1a1a1a",
+        tooltipBorder: getCssVar("--tooltip-border") || "#333",
+      });
+    };
+
+    updateColors();
+
+    const observer = new MutationObserver(updateColors);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     fetch(`/api/products/${encodeURIComponent(partNumber)}`)
@@ -67,12 +96,12 @@ export function PriceHistoryChart({
         <LineChart data={chartData}>
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 10, fill: "#888" }}
+            tick={{ fontSize: 10, fill: colors.axis }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: "#888" }}
+            tick={{ fontSize: 10, fill: colors.axis }}
             axisLine={false}
             tickLine={false}
             domain={["dataMin - 50", "dataMax + 50"]}
@@ -80,8 +109,8 @@ export function PriceHistoryChart({
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "#1a1a1a",
-              border: "1px solid #333",
+              backgroundColor: colors.tooltipBg,
+              border: `1px solid ${colors.tooltipBorder}`,
               borderRadius: "8px",
               fontSize: "12px",
             }}
