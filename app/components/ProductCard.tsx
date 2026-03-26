@@ -8,6 +8,7 @@ import { PriceHistoryChart } from "./PriceHistoryChart";
 interface ProductCardProps {
   product: Product;
   specDiffFlags: SpecDiffFlags;
+  isBestDeal?: boolean;
 }
 
 export interface SpecDiffFlags {
@@ -73,7 +74,11 @@ function SpecRailRow({
   );
 }
 
-export function ProductCard({ product, specDiffFlags }: ProductCardProps) {
+export function ProductCard({
+  product,
+  specDiffFlags,
+  isBestDeal = false,
+}: ProductCardProps) {
   const [showHistory, setShowHistory] = useState(false);
   const chipValue = toTextValue(product.chip, "Inconnu");
   const memoryValue = toUpperValue(product.memory);
@@ -86,7 +91,13 @@ export function ProductCard({ product, specDiffFlags }: ProductCardProps) {
   const releaseYear = toTextValue(product.releaseYear, "");
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_2px_8px_rgb(18_26_35_/_0.06)] transition-all hover:-translate-y-0.5 hover:border-[var(--accent-soft)] hover:shadow-[0_12px_24px_rgb(18_26_35_/_0.12)]">
+    <div
+      className={`overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[0_2px_8px_rgb(18_26_35_/_0.06)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgb(18_26_35_/_0.12)] ${
+        isBestDeal
+          ? "border-emerald-500/75 shadow-[0_0_0_1px_rgba(16,185,129,0.3),0_2px_8px_rgb(18_26_35_/_0.06)] hover:border-emerald-500"
+          : "border-[var(--border)] hover:border-[var(--accent-soft)]"
+      }`}
+    >
       <div className="relative flex justify-center bg-[var(--image-bg)] p-4">
         <img
           src={product.imageUrl}

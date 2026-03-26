@@ -173,6 +173,13 @@ export function ProductGrid({ products }: ProductGridProps) {
     return diffByPartNumber;
   }, [filtered]);
 
+  const bestDealPartNumber = useMemo(() => {
+    if (filtered.length === 0) return null;
+    return filtered.reduce((best, product) =>
+      product.savingsPercent > best.savingsPercent ? product : best
+    ).partNumber;
+  }, [filtered]);
+
   return (
     <>
       <Filters
@@ -202,6 +209,7 @@ export function ProductGrid({ products }: ProductGridProps) {
                 specDiffByPartNumber.get(product.partNumber) ??
                 DEFAULT_DIFF_FLAGS
               }
+              isBestDeal={product.partNumber === bestDealPartNumber}
             />
           ))}
         </div>
