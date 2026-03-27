@@ -77,7 +77,7 @@ export function ProductCard({
               Top remise
             </div>
           )}
-          {!isBestDeal && !isTopDiscount && product.isNew && (
+          {product.isNew && (
             <Badge variant="new">Nouveau</Badge>
           )}
         </div>

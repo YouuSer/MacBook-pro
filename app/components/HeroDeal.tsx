@@ -81,15 +81,21 @@ function HeroSlide({ product }: { product: Product }) {
           <span className="text-2xl font-bold text-[var(--fg)]">
             {product.currentPrice.toLocaleString("fr-FR")} €
           </span>
-          <span className="text-sm text-[var(--text-secondary)] line-through">
-            {product.originalPrice.toLocaleString("fr-FR")} €
-          </span>
-          <Badge variant="discount">-{discountPercent}%</Badge>
+          {discountPercent > 0 && savingsAmount > 0 && (
+            <>
+              <span className="text-sm text-[var(--text-secondary)] line-through">
+                {product.originalPrice.toLocaleString("fr-FR")} €
+              </span>
+              <Badge variant="discount">-{discountPercent}%</Badge>
+            </>
+          )}
         </div>
 
-        <p className="text-sm font-medium text-emerald-500 dark:text-emerald-400">
-          Économisez {savingsAmount.toLocaleString("fr-FR")} €
-        </p>
+        {discountPercent > 0 && savingsAmount > 0 && (
+          <p className="text-sm font-medium text-emerald-500 dark:text-emerald-400">
+            Économisez {savingsAmount.toLocaleString("fr-FR")} €
+          </p>
+        )}
 
         <div className="pt-1">
           <a
