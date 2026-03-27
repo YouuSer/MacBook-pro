@@ -210,12 +210,14 @@ export function PriceHistoryChart({
                       day: "numeric",
                       month: "long",
                       year: "numeric",
+                      timeZone: "Europe/Paris",
                     })}
                     {" "}
                     <span className="text-[var(--text-tertiary)]">
                       {new Date(entry.scrapedAt).toLocaleTimeString("fr-FR", {
                         hour: "2-digit",
                         minute: "2-digit",
+                        timeZone: "Europe/Paris",
                       })}
                     </span>
                   </td>

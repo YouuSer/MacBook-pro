@@ -65,7 +65,7 @@ export function ProductCard({
           height={200}
           className={`h-20 sm:h-40 object-contain ${isExpired ? "grayscale opacity-60" : ""}`}
         />
-        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1.5">
+        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-row flex-wrap gap-1.5">
           {isExpired ? (
             <div className="inline-flex items-center gap-1.5 rounded-full bg-neutral-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -76,6 +76,9 @@ export function ProductCard({
             </div>
           ) : (
             <>
+              {product.isNew && (
+                <Badge variant="new">Nouveau</Badge>
+              )}
               {isBestDeal && (
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-amber-500/30">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -92,9 +95,6 @@ export function ProductCard({
                   </svg>
                   Top remise
                 </div>
-              )}
-              {product.isNew && (
-                <Badge variant="new">Nouveau</Badge>
               )}
             </>
           )}
