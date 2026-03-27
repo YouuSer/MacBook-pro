@@ -101,7 +101,7 @@ export function PriceHistoryChart({
     );
   }
 
-  if (data.length < 2) {
+  if (data.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-sm text-[var(--text-secondary)]">
@@ -111,20 +111,13 @@ export function PriceHistoryChart({
     );
   }
 
-  // Deduplicate: keep one point per (day, price) for the chart
-  const chartData: { date: string; prix: number }[] = [];
-  const seen = new Set<string>();
-  for (const d of data) {
-    const date = new Date(d.scrapedAt).toLocaleDateString("fr-FR", {
+  const chartData = data.map((d) => ({
+    date: new Date(d.firstSeenAt).toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "short",
-    });
-    const key = `${date}|${d.price}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      chartData.push({ date, prix: d.price });
-    }
-  }
+    }),
+    prix: d.price,
+  }));
 
   const tableData = [...data].reverse();
 
@@ -182,17 +175,20 @@ export function PriceHistoryChart({
         </AreaChart>
       </ResponsiveContainer>
 
-      {/* Tableau detail prix par date */}
+      {/* Tableau detail prix par periode */}
       <div className="mt-6">
         <div className="text-xs text-[var(--text-secondary)] mb-3">
-          Detail par date
+          Detail par periode
         </div>
         <div className="rounded-xl border border-[var(--border)] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[var(--surface-secondary)]">
                 <th className="text-left text-xs font-medium text-[var(--text-secondary)] px-4 py-2.5">
-                  Date
+                  Du
+                </th>
+                <th className="text-left text-xs font-medium text-[var(--text-secondary)] px-4 py-2.5">
+                  Au
                 </th>
                 <th className="text-right text-xs font-medium text-[var(--text-secondary)] px-4 py-2.5">
                   Prix
@@ -200,32 +196,52 @@ export function PriceHistoryChart({
               </tr>
             </thead>
             <tbody>
-              {tableData.map((entry, i) => (
-                <tr
-                  key={`${entry.scrapedAt}-${i}`}
-                  className={i % 2 === 0 ? "" : "bg-[var(--surface-secondary)]/50"}
-                >
-                  <td className="px-4 py-2 text-xs text-[var(--fg)]">
-                    {new Date(entry.scrapedAt).toLocaleDateString("fr-FR", {
+              {tableData.map((entry, i) => {
+                const fmt = (iso: string) => {
+                  const d = new Date(iso);
+                  return {
+                    date: d.toLocaleDateString("fr-FR", {
                       day: "numeric",
-                      month: "long",
+                      month: "short",
                       year: "numeric",
                       timeZone: "Europe/Paris",
-                    })}
-                    {" "}
-                    <span className="text-[var(--text-tertiary)]">
-                      {new Date(entry.scrapedAt).toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        timeZone: "Europe/Paris",
-                      })}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-xs font-semibold text-[var(--fg)] text-right">
-                    {entry.price.toLocaleString("fr-FR")} €
-                  </td>
-                </tr>
-              ))}
+                    }),
+                    time: d.toLocaleTimeString("fr-FR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: "Europe/Paris",
+                    }),
+                  };
+                };
+                const from = fmt(entry.firstSeenAt);
+                const to = fmt(entry.lastSeenAt);
+                const isSame = entry.firstSeenAt === entry.lastSeenAt;
+
+                return (
+                  <tr
+                    key={`${entry.firstSeenAt}-${i}`}
+                    className={i % 2 === 0 ? "" : "bg-[var(--surface-secondary)]/50"}
+                  >
+                    <td className="px-4 py-2 text-xs text-[var(--fg)]">
+                      {from.date}{" "}
+                      <span className="text-[var(--text-tertiary)]">{from.time}</span>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-[var(--fg)]">
+                      {isSame ? (
+                        <span className="text-[var(--text-tertiary)]">—</span>
+                      ) : (
+                        <>
+                          {to.date}{" "}
+                          <span className="text-[var(--text-tertiary)]">{to.time}</span>
+                        </>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs font-semibold text-[var(--fg)] text-right">
+                      {entry.price.toLocaleString("fr-FR")} €
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

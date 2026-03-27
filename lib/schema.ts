@@ -25,7 +25,8 @@ export const priceHistory = sqliteTable("price_history", {
     .notNull()
     .references(() => products.partNumber),
   price: real("price").notNull(),
-  scrapedAt: text("scraped_at").notNull(),
+  firstSeenAt: text("first_seen_at").notNull(),
+  lastSeenAt: text("last_seen_at").notNull(),
 });
 
 export const scrapeRuns = sqliteTable("scrape_runs", {

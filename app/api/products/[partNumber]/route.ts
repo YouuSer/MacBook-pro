@@ -16,11 +16,12 @@ export async function GET(
     const history = await db
       .select({
         price: priceHistory.price,
-        scrapedAt: priceHistory.scrapedAt,
+        firstSeenAt: priceHistory.firstSeenAt,
+        lastSeenAt: priceHistory.lastSeenAt,
       })
       .from(priceHistory)
       .where(eq(priceHistory.partNumber, decoded))
-      .orderBy(asc(priceHistory.scrapedAt));
+      .orderBy(asc(priceHistory.firstSeenAt));
 
     return NextResponse.json(history);
   } catch (error) {
