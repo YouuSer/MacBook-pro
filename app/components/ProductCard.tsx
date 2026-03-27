@@ -70,7 +70,7 @@ export function ProductCard({
             </div>
           )}
           {isTopDiscount && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-emerald-500/30 dark:bg-emerald-400 dark:shadow-emerald-400/30">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white dark:bg-emerald-400">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
               </svg>
@@ -119,8 +119,8 @@ export function ProductCard({
 
         {/* Savings + Deal score */}
         <div className="flex items-center justify-between">
-          <p className={`text-xs font-medium ${hasDiscount ? "text-[var(--accent-green)]" : "invisible"}`}>
-            Economisez {savingsAmount.toLocaleString("fr-FR")} €
+          <p className={`text-xs font-medium ${hasDiscount ? "text-emerald-500 dark:text-emerald-400" : "invisible"}`}>
+            Économisez {savingsAmount.toLocaleString("fr-FR")} €
           </p>
           <span className="text-[11px] font-semibold text-[var(--text-tertiary)]" title="Deal score : rapport qualite/prix">
             Score {dealScore.toFixed(1)}
