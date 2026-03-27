@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { products, scrapeRuns } from "@/lib/schema";
 import { desc } from "drizzle-orm";
 import type { Product } from "@/lib/types";
-import { StatsBar } from "./components/StatsBar";
 import { ProductGrid } from "./components/ProductGrid";
 import { ThemeToggle } from "./components/ThemeToggle";
 
@@ -51,36 +50,45 @@ export default async function Home() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-8">
-      <header className="mb-8 flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">
-            MacBook Pro Refurb
-          </h1>
-          <p className="text-[var(--muted)] mt-1">
-            MacBook Pro reconditionnés avec puces Pro sur le store Apple France
-          </p>
+    <>
+      {/* Sticky header */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[var(--bg)]/80 border-b border-[var(--border)]/50">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-base font-semibold">MacBook Pro Refurb</span>
+            <span className="hidden sm:inline text-xs text-[var(--text-tertiary)]">
+              Apple France
+            </span>
+          </div>
+          <ThemeToggle />
         </div>
-        <ThemeToggle />
       </header>
 
-      <StatsBar products={allProducts} lastScrapedAt={lastScrapedAt} />
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {allProducts.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-base text-[var(--text-secondary)] mb-4">
+              Aucun produit pour le moment
+            </p>
+            <p className="text-sm text-[var(--text-tertiary)]">
+              Lancez un premier scan en appelant{" "}
+              <code className="bg-[var(--surface-secondary)] px-2 py-1 rounded-lg text-[var(--accent-green)] text-xs">
+                /api/scrape
+              </code>
+            </p>
+          </div>
+        ) : (
+          <ProductGrid products={allProducts} />
+        )}
+      </main>
 
-      {allProducts.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-lg text-[var(--muted)] mb-4">
-            Aucun produit pour le moment
-          </p>
-          <p className="text-sm text-[var(--muted)]">
-            Lancez un premier scan en appelant{" "}
-            <code className="bg-[var(--card)] px-2 py-1 rounded text-green-400">
-              /api/scrape
-            </code>
-          </p>
-        </div>
-      ) : (
-        <ProductGrid products={allProducts} />
+      {/* Footer */}
+      {lastScrapedAt && (
+        <footer className="text-center py-6 text-[11px] text-[var(--text-tertiary)]">
+          Dernier scan : {new Date(lastScrapedAt).toLocaleString("fr-FR")}
+        </footer>
       )}
-    </main>
+    </>
   );
 }
