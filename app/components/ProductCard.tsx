@@ -70,7 +70,7 @@ export function ProductCard({
             </div>
           )}
           {isTopDiscount && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-green)] px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-[var(--accent-green)]/30">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-emerald-500/30 dark:bg-emerald-400 dark:shadow-emerald-400/30">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
               </svg>
@@ -173,7 +173,7 @@ export function ProductCard({
             href={product.productUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full rounded-full bg-[var(--accent-blue)] px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-[var(--accent-blue-hover)]"
+            className="block w-full rounded-full bg-[#0071e3] px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
           >
             Voir sur Apple
           </a>

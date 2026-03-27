@@ -101,7 +101,7 @@ function HeroSlide({ product }: { product: Product }) {
             href={product.productUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--accent-blue)] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-blue-hover)]"
+            className="inline-flex items-center gap-2 rounded-full bg-[#0071e3] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
           >
             Voir sur Apple
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -130,7 +130,7 @@ export function HeroDeal({ bestDeal, topDiscount }: HeroDealProps) {
     {
       product: topDiscount,
       label: "Top remise",
-      color: "bg-[var(--accent-green)]",
+      color: "bg-emerald-500 dark:bg-emerald-400",
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-white">
           <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
@@ -150,7 +150,7 @@ export function HeroDeal({ bestDeal, topDiscount }: HeroDealProps) {
     setCurrent((c) => (c + 1) % slides.length);
   }, []);
 
-  const borderColor = current === 0 ? "border-amber-500/30" : "border-[var(--accent-green)]/30";
+  const borderColor = current === 0 ? "border-amber-500/30" : "border-emerald-500/30 dark:border-emerald-400/30";
 
   return (
     <div className={`rounded-2xl border ${borderColor} bg-[var(--surface)] shadow-[var(--shadow-sm)] overflow-hidden`}>
@@ -198,7 +198,7 @@ export function HeroDeal({ bestDeal, topDiscount }: HeroDealProps) {
             onClick={() => setCurrent(i)}
             className={`rounded-full transition-all ${
               i === current
-                ? `w-6 h-2 ${i === 0 ? "bg-amber-500" : "bg-[var(--accent-green)]"}`
+                ? `w-6 h-2 ${i === 0 ? "bg-amber-500" : "bg-emerald-500 dark:bg-emerald-400"}`
                 : "w-2 h-2 bg-[var(--border)] hover:bg-[var(--border-hover)]"
             }`}
             aria-label={`Voir ${s.label}`}
