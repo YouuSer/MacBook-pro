@@ -92,8 +92,8 @@ function HeroSlide({ product }: { product: Product }) {
           <Badge variant="discount">-{discountPercent}%</Badge>
         </div>
 
-        <p className="text-sm font-medium text-[var(--accent-green)]">
-          Economisez {savingsAmount.toLocaleString("fr-FR")} €
+        <p className="text-sm font-medium text-emerald-500 dark:text-emerald-400">
+          Économisez {savingsAmount.toLocaleString("fr-FR")} €
         </p>
 
         <div className="pt-1">
