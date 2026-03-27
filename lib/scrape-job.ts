@@ -1,7 +1,7 @@
 import { getDb } from "./db";
 import { products, priceHistory, scrapeRuns } from "./schema";
 import { scrapeAppleRefurb } from "./scraper";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export async function runScrapeJob() {
   const db = getDb();
@@ -51,11 +51,27 @@ export async function runScrapeJob() {
       newCount++;
     }
 
-    await db.insert(priceHistory).values({
-      partNumber: p.partNumber,
-      price: p.currentPrice,
-      scrapedAt: now,
-    });
+    // Consolidate price history: update lastSeenAt if price unchanged, otherwise insert new row
+    const lastEntry = await db
+      .select()
+      .from(priceHistory)
+      .where(eq(priceHistory.partNumber, p.partNumber))
+      .orderBy(desc(priceHistory.lastSeenAt))
+      .limit(1);
+
+    if (lastEntry.length > 0 && lastEntry[0].price === p.currentPrice) {
+      await db
+        .update(priceHistory)
+        .set({ lastSeenAt: now })
+        .where(eq(priceHistory.id, lastEntry[0].id));
+    } else {
+      await db.insert(priceHistory).values({
+        partNumber: p.partNumber,
+        price: p.currentPrice,
+        firstSeenAt: now,
+        lastSeenAt: now,
+      });
+    }
   }
 
   await db.insert(scrapeRuns).values({

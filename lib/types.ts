@@ -81,5 +81,6 @@ export interface Product {
 
 export interface PriceHistoryEntry {
   price: number;
-  scrapedAt: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
 }

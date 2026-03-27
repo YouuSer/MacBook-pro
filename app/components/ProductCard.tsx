@@ -145,6 +145,23 @@ export function ProductCard({
           </span>
         </div>
 
+        {/* Date d'apparition du deal */}
+        <p className="text-[11px] text-[var(--text-tertiary)]">
+          Apparu le{" "}
+          {new Date(product.firstSeen).toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            timeZone: "Europe/Paris",
+          })}
+          {" "}
+          {new Date(product.firstSeen).toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Europe/Paris",
+          })}
+        </p>
+
         {/* Specs grid */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
           {product.memory && (
