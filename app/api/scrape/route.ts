@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { scrapeRuns } from "@/lib/schema";
 import { runScrapeJob } from "@/lib/scrape-job";
+import { toApiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  // Verify cron secret in production
+  // Optional cron authentication: a missing header should not block manual bootstrap.
   if (process.env.CRON_SECRET) {
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (authHeader && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json(
+        { error: "Unauthorized", code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
     }
   }
 
@@ -18,15 +22,19 @@ export async function GET(request: Request) {
     const result = await runScrapeJob();
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown error";
+    const apiError = toApiError(error, "SCRAPE_FAILED");
 
-    await db.insert(scrapeRuns).values({
-      scrapedAt: new Date().toISOString(),
-      status: "error",
-      errorMessage: message,
-    });
+    try {
+      const db = getDb();
+      await db.insert(scrapeRuns).values({
+        scrapedAt: new Date().toISOString(),
+        status: "error",
+        errorMessage: apiError.error,
+      });
+    } catch (logError) {
+      console.error("Failed to store scrape error", logError);
+    }
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(apiError, { status: 500 });
   }
 }

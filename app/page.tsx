@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { products, scrapeRuns } from "@/lib/schema";
 import { desc } from "drizzle-orm";
 import type { Product } from "@/lib/types";
@@ -12,6 +12,7 @@ export default async function Home() {
   let lastScrapedAt: string | null = null;
 
   try {
+    const db = getDb();
     const rows = await db.select().from(products).orderBy(desc(products.lastSeen));
 
     const twentyFourHoursAgo = new Date(
