@@ -8,18 +8,27 @@ import { ThemeToggle } from "./components/ThemeToggle";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let allProducts: Product[] = [];
+  let availableProducts: Product[] = [];
+  let unavailableProducts: Product[] = [];
   let lastScrapedAt: string | null = null;
 
   try {
     const db = getDb();
     const rows = await db.select().from(products).orderBy(desc(products.lastSeen));
 
+    const lastRun = await db
+      .select()
+      .from(scrapeRuns)
+      .orderBy(desc(scrapeRuns.scrapedAt))
+      .limit(1);
+
+    lastScrapedAt = lastRun[0]?.scrapedAt ?? null;
+
     const twentyFourHoursAgo = new Date(
       Date.now() - 24 * 60 * 60 * 1000
     ).toISOString();
 
-    allProducts = rows.map((row) => ({
+    const allProducts = rows.map((row) => ({
       partNumber: row.partNumber,
       title: row.title,
       currentPrice: row.currentPrice,
@@ -39,13 +48,12 @@ export default async function Home() {
       isNew: row.firstSeen >= twentyFourHoursAgo,
     }));
 
-    const lastRun = await db
-      .select()
-      .from(scrapeRuns)
-      .orderBy(desc(scrapeRuns.scrapedAt))
-      .limit(1);
-
-    lastScrapedAt = lastRun[0]?.scrapedAt ?? null;
+    if (lastScrapedAt) {
+      availableProducts = allProducts.filter((p) => p.lastSeen === lastScrapedAt);
+      unavailableProducts = allProducts.filter((p) => p.lastSeen !== lastScrapedAt);
+    } else {
+      availableProducts = allProducts;
+    }
   } catch {
     // DB not initialized yet — show empty state
   }
@@ -67,7 +75,7 @@ export default async function Home() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {allProducts.length === 0 ? (
+        {availableProducts.length === 0 && unavailableProducts.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-base text-[var(--text-secondary)] mb-4">
               Aucun produit pour le moment
@@ -80,7 +88,7 @@ export default async function Home() {
             </p>
           </div>
         ) : (
-          <ProductGrid products={allProducts} />
+          <ProductGrid products={availableProducts} unavailableProducts={unavailableProducts} />
         )}
       </main>
 

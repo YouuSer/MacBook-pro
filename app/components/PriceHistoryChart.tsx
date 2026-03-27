@@ -111,13 +111,22 @@ export function PriceHistoryChart({
     );
   }
 
-  const chartData = data.map((d) => ({
-    date: new Date(d.scrapedAt).toLocaleDateString("fr-FR", {
+  // Deduplicate: keep one point per (day, price) for the chart
+  const chartData: { date: string; prix: number }[] = [];
+  const seen = new Set<string>();
+  for (const d of data) {
+    const date = new Date(d.scrapedAt).toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "short",
-    }),
-    prix: d.price,
-  }));
+    });
+    const key = `${date}|${d.price}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      chartData.push({ date, prix: d.price });
+    }
+  }
+
+  const tableData = [...data].reverse();
 
   return (
     <div>
@@ -172,6 +181,53 @@ export function PriceHistoryChart({
           />
         </AreaChart>
       </ResponsiveContainer>
+
+      {/* Tableau detail prix par date */}
+      <div className="mt-6">
+        <div className="text-xs text-[var(--text-secondary)] mb-3">
+          Detail par date
+        </div>
+        <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-[var(--surface-secondary)]">
+                <th className="text-left text-xs font-medium text-[var(--text-secondary)] px-4 py-2.5">
+                  Date
+                </th>
+                <th className="text-right text-xs font-medium text-[var(--text-secondary)] px-4 py-2.5">
+                  Prix
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {tableData.map((entry, i) => (
+                <tr
+                  key={`${entry.scrapedAt}-${i}`}
+                  className={i % 2 === 0 ? "" : "bg-[var(--surface-secondary)]/50"}
+                >
+                  <td className="px-4 py-2 text-xs text-[var(--fg)]">
+                    {new Date(entry.scrapedAt).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                    {" "}
+                    <span className="text-[var(--text-tertiary)]">
+                      {new Date(entry.scrapedAt).toLocaleTimeString("fr-FR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-xs font-semibold text-[var(--fg)] text-right">
+                    {entry.price.toLocaleString("fr-FR")} €
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

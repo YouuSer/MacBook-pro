@@ -8,6 +8,7 @@ interface ProductCardProps {
   product: Product;
   isBestDeal?: boolean;
   isTopDiscount?: boolean;
+  isExpired?: boolean;
   onShowHistory?: (product: Product) => void;
 }
 
@@ -27,6 +28,7 @@ export function ProductCard({
   product,
   isBestDeal = false,
   isTopDiscount = false,
+  isExpired = false,
   onShowHistory,
 }: ProductCardProps) {
   const discountPercent = Math.round(product.savingsPercent);
@@ -42,12 +44,16 @@ export function ProductCard({
 
   return (
     <div
-      className={`group flex flex-row sm:flex-col overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
-        isBestDeal
-          ? "ring-2 ring-amber-500 border-amber-500/30"
-          : isTopDiscount
-            ? "ring-2 ring-[var(--accent-green)] border-[var(--accent-green)]/30"
-            : "border-[var(--border)] hover:border-[var(--border-hover)]"
+      className={`group flex flex-row sm:flex-col overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-all duration-200 ease-out ${
+        isExpired
+          ? "border-[var(--border)] opacity-70"
+          : `hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
+              isBestDeal
+                ? "ring-2 ring-amber-500 border-amber-500/30"
+                : isTopDiscount
+                  ? "ring-2 ring-[var(--accent-green)] border-[var(--accent-green)]/30"
+                  : "border-[var(--border)] hover:border-[var(--border-hover)]"
+            }`
       }`}
     >
       {/* Image */}
@@ -57,31 +63,43 @@ export function ProductCard({
           alt={product.title}
           width={200}
           height={200}
-          className="h-20 sm:h-40 object-contain"
+          className={`h-20 sm:h-40 object-contain ${isExpired ? "grayscale opacity-60" : ""}`}
         />
         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1.5">
-          {isBestDeal && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-amber-500/30">
+          {isExpired ? (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-neutral-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <path d="M22 4L12 14.01l-3-3" />
+                <circle cx="12" cy="12" r="10" />
+                <path d="M15 9l-6 6M9 9l6 6" />
               </svg>
-              Meilleur deal
+              Indisponible
             </div>
-          )}
-          {isTopDiscount && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white dark:bg-emerald-400">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
-              </svg>
-              Top remise
-            </div>
-          )}
-          {!isBestDeal && !isTopDiscount && product.isNew && (
-            <Badge variant="new">Nouveau</Badge>
+          ) : (
+            <>
+              {isBestDeal && (
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-amber-500/30">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <path d="M22 4L12 14.01l-3-3" />
+                  </svg>
+                  Meilleur deal
+                </div>
+              )}
+              {isTopDiscount && (
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white dark:bg-emerald-400">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
+                  </svg>
+                  Top remise
+                </div>
+              )}
+              {product.isNew && (
+                <Badge variant="new">Nouveau</Badge>
+              )}
+            </>
           )}
         </div>
-        {hasDiscount && (
+        {!isExpired && hasDiscount && (
           <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
             <Badge variant="discount">-{discountPercent}%</Badge>
           </div>
@@ -169,14 +187,20 @@ export function ProductCard({
 
         {/* Actions */}
         <div className="space-y-2 pt-1">
-          <a
-            href={product.productUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full rounded-full bg-[#0071e3] px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
-          >
-            Voir sur Apple
-          </a>
+          {isExpired ? (
+            <div className="block w-full rounded-full bg-neutral-400 dark:bg-neutral-600 px-4 py-2.5 text-center text-sm font-medium text-white cursor-default">
+              Plus disponible
+            </div>
+          ) : (
+            <a
+              href={product.productUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full rounded-full bg-[#0071e3] px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
+            >
+              Voir sur Apple
+            </a>
+          )}
           {onShowHistory && (
             <button
               onClick={() => onShowHistory(product)}
