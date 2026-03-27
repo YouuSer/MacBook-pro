@@ -1,9 +1,10 @@
-import { db } from "./db";
+import { getDb } from "./db";
 import { products, priceHistory, scrapeRuns } from "./schema";
 import { scrapeAppleRefurb } from "./scraper";
 import { eq } from "drizzle-orm";
 
 export async function runScrapeJob() {
+  const db = getDb();
   const now = new Date().toISOString();
 
   const { products: scraped, totalFound } = await scrapeAppleRefurb();
