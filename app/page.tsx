@@ -95,7 +95,7 @@ export default async function Home() {
       {/* Footer */}
       {lastScrapedAt && (
         <footer className="text-center py-6 text-[11px] text-[var(--text-tertiary)]">
-          Dernier scan : {new Date(lastScrapedAt).toLocaleString("fr-FR")}
+          Dernier scan : {new Date(lastScrapedAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}
         </footer>
       )}
     </>
