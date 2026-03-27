@@ -14,15 +14,68 @@ function normalizeScreenSize(value: string): string {
   return match ? match[0] : "";
 }
 
+function normalizeSpecValue(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+function toCapacityValue(value: string): number {
+  const normalized = normalizeSpecValue(value).replace(",", ".");
+  const match = normalized.match(/(\d+(?:\.\d+)?)\s*(TB|GB)/);
+  if (match) {
+    const amount = parseFloat(match[1]);
+    return match[2] === "TB" ? amount * 1024 : amount;
+  }
+
+  const fallback = normalized.match(/(\d+(?:\.\d+)?)/);
+  return fallback ? parseFloat(fallback[1]) : Number.POSITIVE_INFINITY;
+}
+
+function sortSpecValues(values: string[]): string[] {
+  return [...values].sort((a, b) => {
+    const aCapacity = toCapacityValue(a);
+    const bCapacity = toCapacityValue(b);
+
+    if (
+      Number.isFinite(aCapacity) &&
+      Number.isFinite(bCapacity) &&
+      aCapacity !== bCapacity
+    ) {
+      return aCapacity - bCapacity;
+    }
+
+    return a.localeCompare(b, "fr", { numeric: true });
+  });
+}
+
 export function ProductGrid({ products }: ProductGridProps) {
   const [selectedChips, setSelectedChips] = useState<Set<string>>(new Set());
+  const [selectedMemories, setSelectedMemories] = useState<Set<string>>(new Set());
+  const [selectedStorages, setSelectedStorages] = useState<Set<string>>(new Set());
   const [screenSize, setScreenSize] = useState("");
   const [sort, setSort] = useState<SortOption>("discount");
 
   // Extract unique chips
   const chips = useMemo(() => {
-    const set = new Set(products.map((p) => p.chip));
+    const set = new Set(products.map((p) => p.chip).filter(Boolean));
     return Array.from(set).sort();
+  }, [products]);
+
+  const memories = useMemo(() => {
+    const set = new Set(
+      products
+        .map((p) => normalizeSpecValue(p.memory))
+        .filter(Boolean)
+    );
+    return sortSpecValues(Array.from(set));
+  }, [products]);
+
+  const storages = useMemo(() => {
+    const set = new Set(
+      products
+        .map((p) => normalizeSpecValue(p.storage))
+        .filter(Boolean)
+    );
+    return sortSpecValues(Array.from(set));
   }, [products]);
 
   const toggleChip = (chip: string) => {
@@ -34,11 +87,53 @@ export function ProductGrid({ products }: ProductGridProps) {
     });
   };
 
+  const clearChips = () => {
+    setSelectedChips(new Set());
+  };
+
+  const toggleMemory = (memory: string) => {
+    setSelectedMemories((prev) => {
+      const next = new Set(prev);
+      if (next.has(memory)) next.delete(memory);
+      else next.add(memory);
+      return next;
+    });
+  };
+
+  const clearMemories = () => {
+    setSelectedMemories(new Set());
+  };
+
+  const toggleStorage = (storage: string) => {
+    setSelectedStorages((prev) => {
+      const next = new Set(prev);
+      if (next.has(storage)) next.delete(storage);
+      else next.add(storage);
+      return next;
+    });
+  };
+
+  const clearStorages = () => {
+    setSelectedStorages(new Set());
+  };
+
   const filtered = useMemo(() => {
     let result = products;
 
     if (selectedChips.size > 0) {
       result = result.filter((p) => selectedChips.has(p.chip));
+    }
+
+    if (selectedMemories.size > 0) {
+      result = result.filter((p) =>
+        selectedMemories.has(normalizeSpecValue(p.memory))
+      );
+    }
+
+    if (selectedStorages.size > 0) {
+      result = result.filter((p) =>
+        selectedStorages.has(normalizeSpecValue(p.storage))
+      );
     }
 
     if (screenSize) {
@@ -72,7 +167,14 @@ export function ProductGrid({ products }: ProductGridProps) {
     }
 
     return result;
-  }, [products, selectedChips, screenSize, sort]);
+  }, [
+    products,
+    selectedChips,
+    selectedMemories,
+    selectedStorages,
+    screenSize,
+    sort,
+  ]);
 
   const bestDealPartNumber = useMemo(() => {
     if (filtered.length === 0) return null;
@@ -87,6 +189,15 @@ export function ProductGrid({ products }: ProductGridProps) {
         chips={chips}
         selectedChips={selectedChips}
         onToggleChip={toggleChip}
+        onClearChips={clearChips}
+        memories={memories}
+        selectedMemories={selectedMemories}
+        onToggleMemory={toggleMemory}
+        onClearMemories={clearMemories}
+        storages={storages}
+        selectedStorages={selectedStorages}
+        onToggleStorage={toggleStorage}
+        onClearStorages={clearStorages}
         screenSize={screenSize}
         onScreenSize={setScreenSize}
         sort={sort}

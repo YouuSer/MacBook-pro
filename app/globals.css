@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f6f8;
-  --foreground: #121a23;
-  --surface: #ffffff;
-  --surface-strong: #eff3f6;
-  --border: #d8e0e7;
-  --text-subtle: #64748b;
+  --background: #f5f3ef;
+  --foreground: #1a1713;
+  --surface: #fffdf9;
+  --surface-strong: #eeeae4;
+  --border: #ddd8d0;
+  --text-subtle: #7a7268;
   --accent: #0f766e;
   --accent-soft: #d8efe9;
-  --image-bg: #ffffff;
-  --tooltip-bg: #ffffff;
-  --tooltip-border: #d8e0e7;
-  --chart-axis: #64748b;
+  --image-bg: #fffdf9;
+  --tooltip-bg: #fffdf9;
+  --tooltip-border: #ddd8d0;
+  --chart-axis: #7a7268;
   --card: var(--surface);
-  --card-hover: #f6f8fa;
+  --card-hover: #f7f4ef;
   --muted: var(--text-subtle);
 }
 
@@ -39,7 +39,7 @@
 body {
   background:
     radial-gradient(1200px 500px at 5% -10%, rgb(15 118 110 / 0.14), transparent 60%),
-    radial-gradient(900px 420px at 100% 0%, rgb(18 26 35 / 0.1), transparent 58%),
+    radial-gradient(900px 420px at 100% 0%, rgb(30 24 18 / 0.06), transparent 58%),
     var(--background);
   color: var(--foreground);
   font-family: "Avenir Next", "Inter Tight", "Segoe UI", "Helvetica Neue", sans-serif;

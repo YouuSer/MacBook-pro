@@ -22,36 +22,13 @@ const COLOR_LABELS: Record<string, string> = {
   midnightblue: "Minuit",
 };
 
-const UNKNOWN_SPEC = "—";
-
-function toUpperValue(value: string): string {
-  const clean = value.trim();
-  return clean ? clean.toUpperCase() : UNKNOWN_SPEC;
-}
-
-function toTextValue(value: string, fallback = UNKNOWN_SPEC): string {
-  const clean = value.trim();
-  return clean || fallback;
-}
-
-function normalizeScreenSize(value: string): string {
-  const match = value.trim().match(/\d+/);
-  return match ? match[0] : "";
-}
-
-function SpecRailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function SpecRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-subtle)]">
         {label}
       </span>
-      <span className="inline-flex min-w-[72px] justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--foreground)]">
+      <span className="text-xs font-semibold text-[var(--foreground)]">
         {value}
       </span>
     </div>
@@ -63,15 +40,15 @@ export function ProductCard({
   isBestDeal = false,
 }: ProductCardProps) {
   const [showHistory, setShowHistory] = useState(false);
-  const chipValue = toTextValue(product.chip, "Inconnu");
-  const memoryValue = toUpperValue(product.memory);
-  const storageValue = toUpperValue(product.storage);
-  const normalizedScreenSize = normalizeScreenSize(product.screenSize);
-  const screenValue = normalizedScreenSize
-    ? SCREEN_LABELS[normalizedScreenSize] ?? normalizedScreenSize
-    : UNKNOWN_SPEC;
-  const colorValue = product.color ? COLOR_LABELS[product.color] ?? product.color : null;
-  const releaseYear = toTextValue(product.releaseYear, "");
+  const discountPercent = Math.round(product.savingsPercent);
+  const hasDiscount =
+    discountPercent >= 1 && product.currentPrice < product.originalPrice;
+  const screenLabel = product.screenSize
+    ? (SCREEN_LABELS[product.screenSize] ?? product.screenSize)
+    : null;
+  const colorLabel = product.color
+    ? (COLOR_LABELS[product.color] ?? product.color)
+    : null;
 
   return (
     <div
@@ -81,6 +58,7 @@ export function ProductCard({
           : "border-[var(--border)] hover:border-[var(--accent-soft)]"
       }`}
     >
+      {/* Image */}
       <div className="relative flex justify-center bg-[var(--image-bg)] p-4">
         <img
           src={product.imageUrl}
@@ -103,45 +81,49 @@ export function ProductCard({
             <span>Meilleur deal</span>
           </div>
         )}
-        <div className="absolute top-3 right-3 rounded-full ring-2 ring-white/90 dark:ring-slate-900/80">
-          <Badge variant="discount">-{product.savingsPercent.toFixed(0)}%</Badge>
-        </div>
+        {product.isNew && (
+          <div className="absolute top-3 left-3">
+            <Badge variant="new">Nouveau</Badge>
+          </div>
+        )}
+        {hasDiscount && (
+          <div className="absolute top-3 right-3 rounded-full ring-2 ring-white/90 dark:ring-slate-900/80">
+            <Badge variant="discount">-{discountPercent}%</Badge>
+          </div>
+        )}
       </div>
 
-      <div className="space-y-4 p-4">
+      {/* Content */}
+      <div className="space-y-3 p-4">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
+          {product.title}
+        </h3>
+
+        {/* Specs */}
         <div className="space-y-1.5">
-          {product.isNew && <Badge variant="new">Nouveau</Badge>}
-          <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
-            {product.title}
-          </h3>
-
-          <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-[var(--text-subtle)]">
-            {colorValue && <span>{colorValue}</span>}
-            {releaseYear && <span>{releaseYear}</span>}
-          </div>
+          <SpecRow label="Puce" value={product.chip || "—"} />
+          {product.memory && <SpecRow label="Mémoire" value={product.memory.toUpperCase()} />}
+          {product.storage && <SpecRow label="Stockage" value={product.storage.toUpperCase()} />}
+          {screenLabel && <SpecRow label="Écran" value={screenLabel} />}
+          {colorLabel && <SpecRow label="Couleur" value={colorLabel} />}
+          {product.releaseYear && <SpecRow label="Année" value={product.releaseYear} />}
         </div>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3">
-          <div className="space-y-2">
-            <SpecRailRow label="Puce" value={chipValue} />
-            <SpecRailRow label="Memoire" value={memoryValue} />
-            <SpecRailRow label="Stockage" value={storageValue} />
-            <SpecRailRow label="Ecran" value={screenValue} />
-          </div>
-        </div>
-
-        <div>
-          <div className="flex items-baseline gap-3">
-            <span className="text-xl font-bold text-[var(--accent)]">
-              {product.currentPrice.toLocaleString("fr-FR")} €
-            </span>
+        {/* Price */}
+        <div className="flex items-baseline gap-3">
+          <span className="text-xl font-bold text-[var(--accent)]">
+            {product.currentPrice.toLocaleString("fr-FR")} €
+          </span>
+          {hasDiscount && (
             <span className="text-sm text-[var(--text-subtle)] line-through">
               {product.originalPrice.toLocaleString("fr-FR")} €
             </span>
-          </div>
-          <div className="text-xs text-[var(--text-subtle)]">{product.savings}</div>
+          )}
         </div>
 
+        <div className="text-xs text-[var(--text-subtle)]">{product.savings}</div>
+
+        {/* Actions */}
         <div className="flex gap-2 pt-1">
           <a
             href={product.productUrl}
@@ -159,6 +141,7 @@ export function ProductCard({
           </button>
         </div>
 
+        {/* Price History */}
         {showHistory && (
           <PriceHistoryChart
             partNumber={product.partNumber}
