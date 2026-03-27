@@ -187,8 +187,15 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   const globalBestDeal = useMemo(() => {
     if (products.length === 0) return null;
-    return products.reduce((best, product) =>
-      computeDealScore(product) > computeDealScore(best) ? product : best
+    return products.reduce((best, p) =>
+      computeDealScore(p) > computeDealScore(best) ? p : best
+    );
+  }, [products]);
+
+  const globalTopDiscount = useMemo(() => {
+    if (products.length === 0) return null;
+    return products.reduce((best, p) =>
+      p.savingsPercent > best.savingsPercent ? p : best
     );
   }, [products]);
 
@@ -223,10 +230,10 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   return (
     <>
-      {/* Hero Deal - only shown when no filters are active */}
-      {!hasActiveFilters && globalBestDeal && (
+      {/* Hero Deal carousel - only shown when no filters are active */}
+      {!hasActiveFilters && globalBestDeal && globalTopDiscount && (
         <div className="mb-6">
-          <HeroDeal product={globalBestDeal} />
+          <HeroDeal bestDeal={globalBestDeal} topDiscount={globalTopDiscount} />
         </div>
       )}
 

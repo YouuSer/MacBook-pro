@@ -44,9 +44,9 @@ export function ProductCard({
     <div
       className={`group flex flex-row sm:flex-col overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
         isBestDeal
-          ? "ring-2 ring-[var(--accent-green)] border-[var(--accent-green)]/30"
+          ? "ring-2 ring-amber-500 border-amber-500/30"
           : isTopDiscount
-            ? "ring-2 ring-amber-500 border-amber-500/30"
+            ? "ring-2 ring-[var(--accent-green)] border-[var(--accent-green)]/30"
             : "border-[var(--border)] hover:border-[var(--border-hover)]"
       }`}
     >
@@ -61,7 +61,7 @@ export function ProductCard({
         />
         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1.5">
           {isBestDeal && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-green)] px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-[var(--accent-green)]/30">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-amber-500/30">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <path d="M22 4L12 14.01l-3-3" />
@@ -70,7 +70,7 @@ export function ProductCard({
             </div>
           )}
           {isTopDiscount && (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-amber-500/30">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-green)] px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-[var(--accent-green)]/30">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
               </svg>
