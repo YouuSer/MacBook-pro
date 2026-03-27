@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react";
 import type { Product } from "@/lib/types";
 import { Badge } from "./Badge";
-import { computeDealScore } from "@/lib/deal-score";
 
 interface HeroDealProps {
   bestDeal: Product;
@@ -29,7 +28,6 @@ function HeroSlide({ product }: { product: Product }) {
   const screenLabel = rawScreen
     ? (SCREEN_LABELS[rawScreen] ?? `${rawScreen}"`)
     : null;
-  const dealScore = computeDealScore(product);
 
   return (
     <div className="flex flex-col sm:flex-row gap-6 p-5">
@@ -49,9 +47,6 @@ function HeroSlide({ product }: { product: Product }) {
             <span className="text-xs text-[var(--text-secondary)]">{screenLabel}</span>
           )}
           {product.isNew && <Badge variant="new">Nouveau</Badge>}
-          <span className="text-[11px] font-semibold text-[var(--text-tertiary)]">
-            Score {dealScore.toFixed(1)}
-          </span>
         </div>
 
         <h2 className="text-lg font-semibold leading-snug line-clamp-2">
