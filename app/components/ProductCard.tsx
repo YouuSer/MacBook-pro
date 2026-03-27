@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import type { Product } from "@/lib/types";
 import { Badge } from "./Badge";
-import { PriceHistoryChart } from "./PriceHistoryChart";
+import { computeDealScore } from "@/lib/deal-score";
 
 interface ProductCardProps {
   product: Product;
   isBestDeal?: boolean;
+  isTopDiscount?: boolean;
+  onShowHistory?: (product: Product) => void;
 }
 
 const SCREEN_LABELS: Record<string, string> = {
@@ -15,139 +16,176 @@ const SCREEN_LABELS: Record<string, string> = {
   "16": '16"',
 };
 
-const COLOR_LABELS: Record<string, string> = {
-  spacegray: "Gris sidéral",
-  spaceblack: "Noir sidéral",
-  silver: "Argent",
-  midnightblue: "Minuit",
+const COLOR_MAP: Record<string, { hex: string; label: string; textDark?: boolean }> = {
+  spacegray: { hex: "#7d7e80", label: "Gris sideral", textDark: false },
+  spaceblack: { hex: "#393b3d", label: "Noir sideral", textDark: false },
+  silver: { hex: "#c0c1c4", label: "Argent", textDark: true },
+  midnightblue: { hex: "#1f2937", label: "Minuit", textDark: false },
 };
-
-function SpecRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-subtle)]">
-        {label}
-      </span>
-      <span className="text-xs font-semibold text-[var(--foreground)]">
-        {value}
-      </span>
-    </div>
-  );
-}
 
 export function ProductCard({
   product,
   isBestDeal = false,
+  isTopDiscount = false,
+  onShowHistory,
 }: ProductCardProps) {
-  const [showHistory, setShowHistory] = useState(false);
   const discountPercent = Math.round(product.savingsPercent);
   const hasDiscount =
     discountPercent >= 1 && product.currentPrice < product.originalPrice;
-  const screenLabel = product.screenSize
-    ? (SCREEN_LABELS[product.screenSize] ?? product.screenSize)
+  const rawScreen = product.screenSize?.replace(/[^0-9]/g, "") ?? "";
+  const screenLabel = rawScreen
+    ? (SCREEN_LABELS[rawScreen] ?? `${rawScreen}"`)
     : null;
-  const colorLabel = product.color
-    ? (COLOR_LABELS[product.color] ?? product.color)
-    : null;
+  const savingsAmount = product.originalPrice - product.currentPrice;
+  const colorInfo = product.color ? COLOR_MAP[product.color] : null;
+  const dealScore = computeDealScore(product);
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[0_2px_8px_rgb(18_26_35_/_0.06)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgb(18_26_35_/_0.12)] ${
+      className={`group flex flex-row sm:flex-col overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
         isBestDeal
-          ? "border-emerald-500/75 shadow-[0_0_0_1px_rgba(16,185,129,0.3),0_2px_8px_rgb(18_26_35_/_0.06)] hover:border-emerald-500"
-          : "border-[var(--border)] hover:border-[var(--accent-soft)]"
+          ? "ring-2 ring-[var(--accent-green)] border-[var(--accent-green)]/30"
+          : isTopDiscount
+            ? "ring-2 ring-amber-500 border-amber-500/30"
+            : "border-[var(--border)] hover:border-[var(--border-hover)]"
       }`}
     >
       {/* Image */}
-      <div className="relative flex justify-center bg-[var(--image-bg)] p-4">
+      <div className="relative flex items-center justify-center bg-[var(--image-bg)] p-3 sm:p-4 w-24 sm:w-full shrink-0">
         <img
           src={product.imageUrl}
           alt={product.title}
           width={200}
           height={200}
-          className="h-40 object-contain"
+          className="h-20 sm:h-40 object-contain"
         />
-        {isBestDeal && (
-          <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/65 bg-emerald-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm shadow-emerald-500/35">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
-            </svg>
-            <span>Meilleur deal</span>
-          </div>
-        )}
-        {product.isNew && (
-          <div className="absolute top-3 left-3">
+        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1.5">
+          {isBestDeal && (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-green)] px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-[var(--accent-green)]/30">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <path d="M22 4L12 14.01l-3-3" />
+              </svg>
+              Meilleur deal
+            </div>
+          )}
+          {isTopDiscount && (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-amber-500/30">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
+              </svg>
+              Top remise
+            </div>
+          )}
+          {!isBestDeal && !isTopDiscount && product.isNew && (
             <Badge variant="new">Nouveau</Badge>
-          </div>
-        )}
+          )}
+        </div>
         {hasDiscount && (
-          <div className="absolute top-3 right-3 rounded-full ring-2 ring-white/90 dark:ring-slate-900/80">
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
             <Badge variant="discount">-{discountPercent}%</Badge>
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="space-y-3 p-4">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
-          {product.title}
-        </h3>
-
-        {/* Specs */}
-        <div className="space-y-1.5">
-          <SpecRow label="Puce" value={product.chip || "—"} />
-          {product.memory && <SpecRow label="Mémoire" value={product.memory.toUpperCase()} />}
-          {product.storage && <SpecRow label="Stockage" value={product.storage.toUpperCase()} />}
-          {screenLabel && <SpecRow label="Écran" value={screenLabel} />}
-          {colorLabel && <SpecRow label="Couleur" value={colorLabel} />}
-          {product.releaseYear && <SpecRow label="Année" value={product.releaseYear} />}
+      <div className="flex-1 p-3 sm:p-5 space-y-2.5 sm:space-y-3 min-w-0">
+        {/* Chip badge + color tag */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="chip">{product.chip || "—"}</Badge>
+          {colorInfo && (
+            <span
+              className={`inline-flex items-center px-2.5 py-[5px] rounded-full text-[11px] leading-none font-semibold border border-transparent ${
+                colorInfo.textDark ? "text-[#1d1d1f]" : "text-white"
+              }`}
+              style={{ backgroundColor: colorInfo.hex }}
+            >
+              {colorInfo.label}
+            </span>
+          )}
         </div>
 
         {/* Price */}
-        <div className="flex items-baseline gap-3">
-          <span className="text-xl font-bold text-[var(--accent)]">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-xl font-bold text-[var(--fg)]">
             {product.currentPrice.toLocaleString("fr-FR")} €
           </span>
           {hasDiscount && (
-            <span className="text-sm text-[var(--text-subtle)] line-through">
+            <span className="text-sm text-[var(--text-secondary)] line-through">
               {product.originalPrice.toLocaleString("fr-FR")} €
             </span>
           )}
         </div>
 
-        <div className="text-xs text-[var(--text-subtle)]">{product.savings}</div>
+        {/* Savings + Deal score */}
+        <div className="flex items-center justify-between">
+          <p className={`text-xs font-medium ${hasDiscount ? "text-[var(--accent-green)]" : "invisible"}`}>
+            Economisez {savingsAmount.toLocaleString("fr-FR")} €
+          </p>
+          <span className="text-[11px] font-semibold text-[var(--text-tertiary)]" title="Deal score : rapport qualite/prix">
+            Score {dealScore.toFixed(1)}
+          </span>
+        </div>
+
+        {/* Specs grid */}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          {product.memory && (
+            <div className="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
+                <rect x="2" y="6" width="20" height="12" rx="2" />
+                <path d="M6 6V4M10 6V4M14 6V4M18 6V4" />
+              </svg>
+              <span className="text-xs font-semibold">{product.memory.toUpperCase()}</span>
+            </div>
+          )}
+          {product.storage && (
+            <div className="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M9 3v18" />
+              </svg>
+              <span className="text-xs font-semibold">{product.storage.toUpperCase()}</span>
+            </div>
+          )}
+          {screenLabel && (
+            <div className="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+              <span className="text-xs font-semibold">{screenLabel}</span>
+            </div>
+          )}
+          {product.releaseYear && (
+            <div className="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+              <span className="text-xs font-semibold">{product.releaseYear}</span>
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
-        <div className="flex gap-2 pt-1">
+        <div className="space-y-2 pt-1">
           <a
             href={product.productUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 rounded-lg bg-[#0071e3] px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-[#0077ed]"
+            className="block w-full rounded-full bg-[var(--accent-blue)] px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-[var(--accent-blue-hover)]"
           >
             Voir sur Apple
           </a>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-sm text-sky-600 transition-colors hover:border-sky-500 hover:bg-sky-500/15 hover:text-sky-500 dark:text-sky-300 dark:hover:text-sky-200"
-          >
-            {showHistory ? "Masquer" : "Historique"}
-          </button>
+          {onShowHistory && (
+            <button
+              onClick={() => onShowHistory(product)}
+              className="w-full text-center text-xs text-[var(--text-secondary)] hover:text-[var(--accent-blue)] transition-colors"
+            >
+              Historique des prix
+            </button>
+          )}
         </div>
-
-        {/* Price History */}
-        {showHistory && (
-          <PriceHistoryChart
-            partNumber={product.partNumber}
-            originalPrice={product.originalPrice}
-          />
-        )}
       </div>
     </div>
   );

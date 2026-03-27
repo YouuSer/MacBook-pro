@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
-  YAxis,
   Tooltip,
   ReferenceLine,
   ResponsiveContainer,
@@ -27,18 +26,21 @@ export function PriceHistoryChart({
 }: PriceHistoryChartProps) {
   const [data, setData] = useState<PriceHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [colors, setColors] = useState({
     axis: "#888",
-    tooltipBg: "#1a1a1a",
-    tooltipBorder: "#333",
+    tooltipBg: "#fff",
+    tooltipBorder: "#ddd",
+    blue: "#0071e3",
   });
 
   useEffect(() => {
     const updateColors = () => {
       setColors({
         axis: getCssVar("--chart-axis") || "#888",
-        tooltipBg: getCssVar("--tooltip-bg") || "#1a1a1a",
-        tooltipBorder: getCssVar("--tooltip-border") || "#333",
+        tooltipBg: getCssVar("--tooltip-bg") || "#fff",
+        tooltipBorder: getCssVar("--tooltip-border") || "#ddd",
+        blue: getCssVar("--accent-blue") || "#0071e3",
       });
     };
 
@@ -54,27 +56,57 @@ export function PriceHistoryChart({
   }, []);
 
   useEffect(() => {
+    setLoading(true);
+    setError(false);
     fetch(`/api/products/${encodeURIComponent(partNumber)}`)
       .then((res) => res.json())
       .then((d) => {
         setData(d);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
   }, [partNumber]);
 
   if (loading) {
     return (
-      <div className="text-xs text-[var(--muted)] py-4 text-center">
-        Chargement...
+      <div className="flex items-center justify-center py-12">
+        <div className="w-5 h-5 border-2 border-[var(--border)] border-t-[var(--accent-blue)] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-sm text-[var(--text-secondary)] mb-2">
+          Impossible de charger l'historique
+        </p>
+        <button
+          onClick={() => {
+            setLoading(true);
+            setError(false);
+            fetch(`/api/products/${encodeURIComponent(partNumber)}`)
+              .then((res) => res.json())
+              .then((d) => { setData(d); setLoading(false); })
+              .catch(() => { setError(true); setLoading(false); });
+          }}
+          className="text-xs text-[var(--accent-blue)] hover:underline"
+        >
+          Reessayer
+        </button>
       </div>
     );
   }
 
   if (data.length < 2) {
     return (
-      <div className="text-xs text-[var(--muted)] py-4 text-center">
-        Pas assez de données pour afficher un historique
+      <div className="text-center py-12">
+        <p className="text-sm text-[var(--text-secondary)]">
+          Pas assez de donnees pour afficher un historique
+        </p>
       </div>
     );
   }
@@ -88,53 +120,57 @@ export function PriceHistoryChart({
   }));
 
   return (
-    <div className="pt-3">
-      <div className="text-xs text-[var(--muted)] mb-2">
-        Historique des prix
+    <div>
+      <div className="text-xs text-[var(--text-secondary)] mb-4">
+        Evolution du prix
       </div>
-      <ResponsiveContainer width="100%" height={150}>
-        <LineChart data={chartData}>
+      <ResponsiveContainer width="100%" height={220}>
+        <AreaChart data={chartData}>
+          <defs>
+            <linearGradient id="blueGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={colors.blue} stopOpacity={0.2} />
+              <stop offset="100%" stopColor={colors.blue} stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <XAxis
             dataKey="date"
             tick={{ fontSize: 10, fill: colors.axis }}
             axisLine={false}
             tickLine={false}
           />
-          <YAxis
-            tick={{ fontSize: 10, fill: colors.axis }}
-            axisLine={false}
-            tickLine={false}
-            domain={["dataMin - 50", "dataMax + 50"]}
-            tickFormatter={(v) => `${v} €`}
-          />
           <Tooltip
             contentStyle={{
               backgroundColor: colors.tooltipBg,
               border: `1px solid ${colors.tooltipBorder}`,
-              borderRadius: "8px",
+              borderRadius: "12px",
               fontSize: "12px",
+              boxShadow: "0 4px 12px rgb(0 0 0 / 0.1)",
             }}
-            formatter={(value) => [`${Number(value).toLocaleString("fr-FR")} €`, "Prix"]}
+            formatter={(value) => [
+              `${Number(value).toLocaleString("fr-FR")} €`,
+              "Prix",
+            ]}
           />
           <ReferenceLine
             y={originalPrice}
-            stroke="#ef4444"
+            stroke="var(--accent-red)"
             strokeDasharray="3 3"
             label={{
               value: `Neuf: ${originalPrice.toLocaleString("fr-FR")} €`,
               position: "right",
-              style: { fontSize: 10, fill: "#ef4444" },
+              style: { fontSize: 10, fill: "var(--accent-red)" },
             }}
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="prix"
-            stroke="#22c55e"
+            stroke={colors.blue}
             strokeWidth={2}
-            dot={{ fill: "#22c55e", r: 3 }}
-            activeDot={{ r: 5 }}
+            fill="url(#blueGradient)"
+            dot={{ fill: colors.blue, r: 3, strokeWidth: 0 }}
+            activeDot={{ r: 5, strokeWidth: 0 }}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

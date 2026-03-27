@@ -3,7 +3,11 @@
 import { useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "./ProductCard";
-import { Filters, type SortOption } from "./Filters";
+import { FilterBar, type SortOption } from "./FilterBar";
+import { PriceHistoryPanel } from "./PriceHistoryPanel";
+import { HeroDeal } from "./HeroDeal";
+import { StatsStrip } from "./StatsStrip";
+import { computeDealScore } from "@/lib/deal-score";
 
 interface ProductGridProps {
   products: Product[];
@@ -47,14 +51,19 @@ function sortSpecValues(values: string[]): string[] {
   });
 }
 
+const SCREEN_LABELS: Record<string, string> = {
+  "14": '14"',
+  "16": '16"',
+};
+
 export function ProductGrid({ products }: ProductGridProps) {
   const [selectedChips, setSelectedChips] = useState<Set<string>>(new Set());
   const [selectedMemories, setSelectedMemories] = useState<Set<string>>(new Set());
   const [selectedStorages, setSelectedStorages] = useState<Set<string>>(new Set());
-  const [screenSize, setScreenSize] = useState("");
-  const [sort, setSort] = useState<SortOption>("discount");
+  const [selectedScreenSizes, setSelectedScreenSizes] = useState<Set<string>>(new Set());
+  const [sort, setSort] = useState<SortOption>("best-deal");
+  const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
 
-  // Extract unique chips
   const chips = useMemo(() => {
     const set = new Set(products.map((p) => p.chip).filter(Boolean));
     return Array.from(set).sort();
@@ -62,60 +71,54 @@ export function ProductGrid({ products }: ProductGridProps) {
 
   const memories = useMemo(() => {
     const set = new Set(
-      products
-        .map((p) => normalizeSpecValue(p.memory))
-        .filter(Boolean)
+      products.map((p) => normalizeSpecValue(p.memory)).filter(Boolean)
     );
     return sortSpecValues(Array.from(set));
   }, [products]);
 
   const storages = useMemo(() => {
     const set = new Set(
-      products
-        .map((p) => normalizeSpecValue(p.storage))
-        .filter(Boolean)
+      products.map((p) => normalizeSpecValue(p.storage)).filter(Boolean)
     );
     return sortSpecValues(Array.from(set));
   }, [products]);
 
-  const toggleChip = (chip: string) => {
-    setSelectedChips((prev) => {
+  const screenSizes = useMemo(() => {
+    const set = new Set(
+      products
+        .map((p) => normalizeScreenSize(p.screenSize))
+        .filter(Boolean)
+    );
+    return Array.from(set)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((s) => SCREEN_LABELS[s] ?? s);
+  }, [products]);
+
+  const toggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (value: string) => {
+    setter((prev) => {
       const next = new Set(prev);
-      if (next.has(chip)) next.delete(chip);
-      else next.add(chip);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
       return next;
     });
   };
 
-  const clearChips = () => {
+  const clear = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => () => {
+    setter(new Set());
+  };
+
+  const clearAll = () => {
     setSelectedChips(new Set());
-  };
-
-  const toggleMemory = (memory: string) => {
-    setSelectedMemories((prev) => {
-      const next = new Set(prev);
-      if (next.has(memory)) next.delete(memory);
-      else next.add(memory);
-      return next;
-    });
-  };
-
-  const clearMemories = () => {
     setSelectedMemories(new Set());
-  };
-
-  const toggleStorage = (storage: string) => {
-    setSelectedStorages((prev) => {
-      const next = new Set(prev);
-      if (next.has(storage)) next.delete(storage);
-      else next.add(storage);
-      return next;
-    });
-  };
-
-  const clearStorages = () => {
     setSelectedStorages(new Set());
+    setSelectedScreenSizes(new Set());
   };
+
+  const hasActiveFilters =
+    selectedChips.size > 0 ||
+    selectedMemories.size > 0 ||
+    selectedStorages.size > 0 ||
+    selectedScreenSizes.size > 0;
 
   const filtered = useMemo(() => {
     let result = products;
@@ -136,91 +139,157 @@ export function ProductGrid({ products }: ProductGridProps) {
       );
     }
 
-    if (screenSize) {
-      result = result.filter(
-        (p) => normalizeScreenSize(p.screenSize) === screenSize
+    if (selectedScreenSizes.size > 0) {
+      const rawSizes = new Set(
+        Array.from(selectedScreenSizes).map((s) => s.replace('"', "").replace('"', ""))
+      );
+      result = result.filter((p) =>
+        rawSizes.has(normalizeScreenSize(p.screenSize))
       );
     }
 
     switch (sort) {
+      case "best-deal":
+        result = [...result].sort((a, b) => computeDealScore(b) - computeDealScore(a));
+        break;
       case "discount":
-        result = [...result].sort(
-          (a, b) => b.savingsPercent - a.savingsPercent
-        );
+        result = [...result].sort((a, b) => b.savingsPercent - a.savingsPercent);
         break;
       case "price-asc":
-        result = [...result].sort(
-          (a, b) => a.currentPrice - b.currentPrice
-        );
+        result = [...result].sort((a, b) => a.currentPrice - b.currentPrice);
         break;
       case "price-desc":
-        result = [...result].sort(
-          (a, b) => b.currentPrice - a.currentPrice
-        );
+        result = [...result].sort((a, b) => b.currentPrice - a.currentPrice);
         break;
       case "newest":
         result = [...result].sort(
-          (a, b) =>
-            new Date(b.firstSeen).getTime() - new Date(a.firstSeen).getTime()
+          (a, b) => new Date(b.firstSeen).getTime() - new Date(a.firstSeen).getTime()
         );
         break;
     }
 
     return result;
-  }, [
-    products,
-    selectedChips,
-    selectedMemories,
-    selectedStorages,
-    screenSize,
-    sort,
-  ]);
+  }, [products, selectedChips, selectedMemories, selectedStorages, selectedScreenSizes, sort]);
 
   const bestDealPartNumber = useMemo(() => {
+    if (filtered.length === 0) return null;
+    return filtered.reduce((best, product) =>
+      computeDealScore(product) > computeDealScore(best) ? product : best
+    ).partNumber;
+  }, [filtered]);
+
+  const topDiscountPartNumber = useMemo(() => {
     if (filtered.length === 0) return null;
     return filtered.reduce((best, product) =>
       product.savingsPercent > best.savingsPercent ? product : best
     ).partNumber;
   }, [filtered]);
 
+  const globalBestDeal = useMemo(() => {
+    if (products.length === 0) return null;
+    return products.reduce((best, product) =>
+      computeDealScore(product) > computeDealScore(best) ? product : best
+    );
+  }, [products]);
+
+  const activeFilterTags = useMemo(() => {
+    const tags: { label: string; onRemove: () => void }[] = [];
+    selectedChips.forEach((chip) => {
+      tags.push({
+        label: chip,
+        onRemove: () => toggle(setSelectedChips)(chip),
+      });
+    });
+    selectedMemories.forEach((mem) => {
+      tags.push({
+        label: mem,
+        onRemove: () => toggle(setSelectedMemories)(mem),
+      });
+    });
+    selectedStorages.forEach((stor) => {
+      tags.push({
+        label: stor,
+        onRemove: () => toggle(setSelectedStorages)(stor),
+      });
+    });
+    selectedScreenSizes.forEach((size) => {
+      tags.push({
+        label: size,
+        onRemove: () => toggle(setSelectedScreenSizes)(size),
+      });
+    });
+    return tags;
+  }, [selectedChips, selectedMemories, selectedStorages, selectedScreenSizes]);
+
   return (
     <>
-      <Filters
+      {/* Hero Deal - only shown when no filters are active */}
+      {!hasActiveFilters && globalBestDeal && (
+        <div className="mb-6">
+          <HeroDeal product={globalBestDeal} />
+        </div>
+      )}
+
+      <FilterBar
         chips={chips}
         selectedChips={selectedChips}
-        onToggleChip={toggleChip}
-        onClearChips={clearChips}
+        onToggleChip={toggle(setSelectedChips)}
+        onClearChips={clear(setSelectedChips)}
         memories={memories}
         selectedMemories={selectedMemories}
-        onToggleMemory={toggleMemory}
-        onClearMemories={clearMemories}
+        onToggleMemory={toggle(setSelectedMemories)}
+        onClearMemories={clear(setSelectedMemories)}
         storages={storages}
         selectedStorages={selectedStorages}
-        onToggleStorage={toggleStorage}
-        onClearStorages={clearStorages}
-        screenSize={screenSize}
-        onScreenSize={setScreenSize}
+        onToggleStorage={toggle(setSelectedStorages)}
+        onClearStorages={clear(setSelectedStorages)}
+        screenSizes={screenSizes}
+        selectedScreenSizes={selectedScreenSizes}
+        onToggleScreenSize={toggle(setSelectedScreenSizes)}
+        onClearScreenSizes={clear(setSelectedScreenSizes)}
         sort={sort}
         onSort={setSort}
+        onClearAll={clearAll}
+        resultCount={filtered.length}
+        hasActiveFilters={hasActiveFilters}
+        activeFilterTags={activeFilterTags}
       />
 
+      <StatsStrip products={products} />
+
       {filtered.length === 0 ? (
-        <div className="text-center py-20 text-[var(--muted)]">
-          <p className="text-lg mb-2">Aucun MacBook Pro disponible</p>
-          <p className="text-sm">
-            Modifiez vos filtres ou revenez plus tard
+        <div className="text-center py-20">
+          <p className="text-base text-[var(--text-secondary)] mb-3">
+            Aucun MacBook Pro ne correspond a vos filtres
           </p>
+          <button
+            onClick={clearAll}
+            className="text-sm text-[var(--accent-blue)] hover:underline"
+          >
+            Reinitialiser les filtres
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((product) => (
             <ProductCard
               key={product.partNumber}
               product={product}
               isBestDeal={product.partNumber === bestDealPartNumber}
+              isTopDiscount={product.partNumber === topDiscountPartNumber}
+              onShowHistory={setHistoryProduct}
             />
           ))}
         </div>
+      )}
+
+      {/* Price history panel */}
+      {historyProduct && (
+        <PriceHistoryPanel
+          product={historyProduct}
+          isOpen={!!historyProduct}
+          onClose={() => setHistoryProduct(null)}
+        />
       )}
     </>
   );
