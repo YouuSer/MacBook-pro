@@ -21,6 +21,10 @@ interface FilterBarProps {
   selectedScreenSizes: Set<string>;
   onToggleScreenSize: (size: string) => void;
   onClearScreenSizes: () => void;
+  sources: string[];
+  selectedSources: Set<string>;
+  onToggleSource: (source: string) => void;
+  onClearSources: () => void;
   sort: SortOption;
   onSort: (sort: SortOption) => void;
   onClearAll: () => void;
@@ -46,6 +50,10 @@ export function FilterBar({
   selectedScreenSizes,
   onToggleScreenSize,
   onClearScreenSizes,
+  sources,
+  selectedSources,
+  onToggleSource,
+  onClearSources,
   sort,
   onSort,
   onClearAll,
@@ -56,6 +64,15 @@ export function FilterBar({
   return (
     <div className="sticky top-14 z-40 -mx-4 px-4 py-3 backdrop-blur-xl bg-[var(--bg)]/80 border-b border-[var(--border)]/50">
       <div className="flex items-center gap-2 flex-wrap">
+        {sources.length > 1 && (
+          <FilterDropdown
+            label="Source"
+            options={sources}
+            selected={selectedSources}
+            onToggle={onToggleSource}
+            onClear={onClearSources}
+          />
+        )}
         <FilterDropdown
           label="Puce"
           options={chips}

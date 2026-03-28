@@ -12,7 +12,8 @@ import {
 import type { PriceHistoryEntry } from "@/lib/types";
 
 interface PriceHistoryChartProps {
-  partNumber: string;
+  source: string;
+  productId: string;
   originalPrice: number;
 }
 
@@ -21,7 +22,8 @@ function getCssVar(name: string): string {
 }
 
 export function PriceHistoryChart({
-  partNumber,
+  source,
+  productId,
   originalPrice,
 }: PriceHistoryChartProps) {
   const [data, setData] = useState<PriceHistoryEntry[]>([]);
@@ -58,7 +60,7 @@ export function PriceHistoryChart({
   useEffect(() => {
     setLoading(true);
     setError(false);
-    fetch(`/api/products/${encodeURIComponent(partNumber)}`)
+    fetch(`/api/products/${encodeURIComponent(productId)}?source=${encodeURIComponent(source)}`)
       .then((res) => res.json())
       .then((d) => {
         setData(d);
@@ -68,7 +70,7 @@ export function PriceHistoryChart({
         setError(true);
         setLoading(false);
       });
-  }, [partNumber]);
+  }, [source, productId]);
 
   if (loading) {
     return (
@@ -88,7 +90,7 @@ export function PriceHistoryChart({
           onClick={() => {
             setLoading(true);
             setError(false);
-            fetch(`/api/products/${encodeURIComponent(partNumber)}`)
+            fetch(`/api/products/${encodeURIComponent(productId)}?source=${encodeURIComponent(source)}`)
               .then((res) => res.json())
               .then((d) => { setData(d); setLoading(false); })
               .catch(() => { setError(true); setLoading(false); });

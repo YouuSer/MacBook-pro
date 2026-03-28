@@ -1,22 +1,26 @@
 import { getDb } from "./db";
 import { products, priceHistory, scrapeRuns } from "./schema";
-import { scrapeAppleRefurb } from "./scraper";
 import { eq, and, desc } from "drizzle-orm";
+import type { Scraper } from "./scrapers/types";
+import { getEnabledScrapers } from "./scrapers";
 
-export async function runScrapeJob() {
+export async function runScrapeJobForSource(scraper: Scraper) {
   const db = getDb();
   const now = new Date().toISOString();
 
-  const { products: scraped, totalFound } = await scrapeAppleRefurb();
+  const { products: scraped, totalFound } = await scraper.scrape();
 
-  // Get existing products to detect new ones
-  const existing = await db.select().from(products);
-  const existingMap = new Map(existing.map((p) => [p.partNumber, p]));
+  // Get existing products for this source to detect new ones
+  const existing = await db
+    .select()
+    .from(products)
+    .where(eq(products.source, scraper.source));
+  const existingMap = new Map(existing.map((p) => [p.productId, p]));
 
   let newCount = 0;
 
   for (const p of scraped) {
-    const exists = existingMap.get(p.partNumber);
+    const exists = existingMap.get(p.productId);
 
     if (exists) {
       await db
@@ -28,10 +32,16 @@ export async function runScrapeJob() {
           savings: p.savings,
           lastSeen: now,
         })
-        .where(eq(products.partNumber, p.partNumber));
+        .where(
+          and(
+            eq(products.source, p.source),
+            eq(products.productId, p.productId)
+          )
+        );
     } else {
       await db.insert(products).values({
-        partNumber: p.partNumber,
+        source: p.source,
+        productId: p.productId,
         title: p.title,
         currentPrice: p.currentPrice,
         originalPrice: p.originalPrice,
@@ -47,6 +57,7 @@ export async function runScrapeJob() {
         imageUrl: p.imageUrl,
         firstSeen: now,
         lastSeen: now,
+        condition: p.condition ?? null,
       });
       newCount++;
     }
@@ -55,7 +66,12 @@ export async function runScrapeJob() {
     const lastEntry = await db
       .select()
       .from(priceHistory)
-      .where(eq(priceHistory.partNumber, p.partNumber))
+      .where(
+        and(
+          eq(priceHistory.source, p.source),
+          eq(priceHistory.productId, p.productId)
+        )
+      )
       .orderBy(desc(priceHistory.lastSeenAt))
       .limit(1);
 
@@ -66,7 +82,8 @@ export async function runScrapeJob() {
         .where(eq(priceHistory.id, lastEntry[0].id));
     } else {
       await db.insert(priceHistory).values({
-        partNumber: p.partNumber,
+        source: p.source,
+        productId: p.productId,
         price: p.currentPrice,
         firstSeenAt: now,
         lastSeenAt: now,
@@ -75,6 +92,7 @@ export async function runScrapeJob() {
   }
 
   await db.insert(scrapeRuns).values({
+    source: scraper.source,
     scrapedAt: now,
     totalFound,
     proChipCount: scraped.length,
@@ -82,5 +100,29 @@ export async function runScrapeJob() {
     status: "success",
   });
 
-  return { totalFound, proChipCount: scraped.length, newProducts: newCount, scrapedAt: now };
+  return {
+    source: scraper.source,
+    totalFound,
+    proChipCount: scraped.length,
+    newProducts: newCount,
+    scrapedAt: now,
+  };
+}
+
+export async function runAllScrapeJobs() {
+  const scrapers = getEnabledScrapers();
+  const results = [];
+
+  for (const scraper of scrapers) {
+    const result = await runScrapeJobForSource(scraper);
+    results.push(result);
+  }
+
+  return results;
+}
+
+// Backward-compatible: run only Apple scraper
+export async function runScrapeJob() {
+  const { AppleRefurbScraper } = await import("./scrapers/apple-refurb");
+  return runScrapeJobForSource(new AppleRefurbScraper());
 }

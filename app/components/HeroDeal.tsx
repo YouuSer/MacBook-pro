@@ -102,9 +102,13 @@ function HeroSlide({ product }: { product: Product }) {
             href={product.productUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-[#0071e3] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
+            className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium text-white transition-colors ${
+              product.source === "amazon"
+                ? "bg-[#FF9900] hover:bg-[#e88a00] text-[#0F1111]"
+                : "bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
+            }`}
           >
-            Voir sur Apple
+            {product.source === "amazon" ? "Voir sur Amazon" : "Voir sur Apple"}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M7 17L17 7M17 7H7M17 7V17" />
             </svg>

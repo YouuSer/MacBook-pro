@@ -24,6 +24,21 @@ const COLOR_MAP: Record<string, { hex: string; label: string; textDark?: boolean
   midnightblue: { hex: "#1f2937", label: "Minuit", textDark: false },
 };
 
+const SOURCE_CONFIG = {
+  apple_refurb: {
+    label: "Apple Refurb",
+    ctaLabel: "Voir sur Apple",
+    ctaClass: "bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]",
+    badgeClass: "bg-neutral-800 dark:bg-neutral-700 text-white",
+  },
+  amazon: {
+    label: "Amazon",
+    ctaLabel: "Voir sur Amazon",
+    ctaClass: "bg-[#FF9900] hover:bg-[#e88a00] text-[#0F1111]",
+    badgeClass: "bg-[#FF9900] text-[#0F1111]",
+  },
+};
+
 export function ProductCard({
   product,
   isBestDeal = false,
@@ -41,6 +56,7 @@ export function ProductCard({
   const savingsAmount = product.originalPrice - product.currentPrice;
   const colorInfo = product.color ? COLOR_MAP[product.color] : null;
   const dealScore = computeDealScore(product);
+  const sourceConfig = SOURCE_CONFIG[product.source] ?? SOURCE_CONFIG.apple_refurb;
 
   return (
     <div
@@ -76,6 +92,10 @@ export function ProductCard({
             </div>
           ) : (
             <>
+              {/* Source badge */}
+              <span className={`inline-flex items-center px-2 py-[4px] rounded-full text-[10px] leading-none font-semibold ${sourceConfig.badgeClass}`}>
+                {sourceConfig.label}
+              </span>
               {product.isNew && (
                 <Badge variant="new">Nouveau</Badge>
               )}
@@ -213,9 +233,9 @@ export function ProductCard({
               href={product.productUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full rounded-full bg-[#0071e3] px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
+              className={`block w-full rounded-full px-4 py-2.5 text-center text-sm font-medium text-white transition-colors ${sourceConfig.ctaClass}`}
             >
-              Voir sur Apple
+              {sourceConfig.ctaLabel}
             </a>
           )}
           {onShowHistory && (

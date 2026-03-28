@@ -14,6 +14,11 @@ interface ProductGridProps {
   unavailableProducts?: Product[];
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+  apple_refurb: "Apple Refurb",
+  amazon: "Amazon",
+};
+
 function normalizeScreenSize(value: string): string {
   const match = value.trim().match(/\d+/);
   return match ? match[0] : "";
@@ -57,11 +62,16 @@ const SCREEN_LABELS: Record<string, string> = {
   "16": '16"',
 };
 
+function productKey(p: Product): string {
+  return `${p.source}:${p.productId}`;
+}
+
 export function ProductGrid({ products, unavailableProducts = [] }: ProductGridProps) {
   const [selectedChips, setSelectedChips] = useState<Set<string>>(new Set());
   const [selectedMemories, setSelectedMemories] = useState<Set<string>>(new Set());
   const [selectedStorages, setSelectedStorages] = useState<Set<string>>(new Set());
   const [selectedScreenSizes, setSelectedScreenSizes] = useState<Set<string>>(new Set());
+  const [selectedSources, setSelectedSources] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<SortOption>("best-deal");
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
 
@@ -95,6 +105,11 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       .map((s) => SCREEN_LABELS[s] ?? s);
   }, [products]);
 
+  const sources = useMemo(() => {
+    const set = new Set(products.map((p) => p.source));
+    return Array.from(set).map((s) => SOURCE_LABELS[s] ?? s);
+  }, [products]);
+
   const toggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (value: string) => {
     setter((prev) => {
       const next = new Set(prev);
@@ -113,16 +128,29 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     setSelectedMemories(new Set());
     setSelectedStorages(new Set());
     setSelectedScreenSizes(new Set());
+    setSelectedSources(new Set());
   };
 
   const hasActiveFilters =
     selectedChips.size > 0 ||
     selectedMemories.size > 0 ||
     selectedStorages.size > 0 ||
-    selectedScreenSizes.size > 0;
+    selectedScreenSizes.size > 0 ||
+    selectedSources.size > 0;
 
   const filtered = useMemo(() => {
     let result = products;
+
+    if (selectedSources.size > 0) {
+      // Reverse-map labels to source keys
+      const reverseLabelMap = Object.fromEntries(
+        Object.entries(SOURCE_LABELS).map(([k, v]) => [v, k])
+      );
+      const sourceKeys = new Set(
+        Array.from(selectedSources).map((s) => reverseLabelMap[s] ?? s)
+      );
+      result = result.filter((p) => sourceKeys.has(p.source));
+    }
 
     if (selectedChips.size > 0) {
       result = result.filter((p) => selectedChips.has(p.chip));
@@ -170,20 +198,24 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     }
 
     return result;
-  }, [products, selectedChips, selectedMemories, selectedStorages, selectedScreenSizes, sort]);
+  }, [products, selectedChips, selectedMemories, selectedStorages, selectedScreenSizes, selectedSources, sort]);
 
-  const bestDealPartNumber = useMemo(() => {
+  const bestDealKey = useMemo(() => {
     if (filtered.length === 0) return null;
-    return filtered.reduce((best, product) =>
-      computeDealScore(product) > computeDealScore(best) ? product : best
-    ).partNumber;
+    return productKey(
+      filtered.reduce((best, product) =>
+        computeDealScore(product) > computeDealScore(best) ? product : best
+      )
+    );
   }, [filtered]);
 
-  const topDiscountPartNumber = useMemo(() => {
+  const topDiscountKey = useMemo(() => {
     if (filtered.length === 0) return null;
-    return filtered.reduce((best, product) =>
-      product.savingsPercent > best.savingsPercent ? product : best
-    ).partNumber;
+    return productKey(
+      filtered.reduce((best, product) =>
+        product.savingsPercent > best.savingsPercent ? product : best
+      )
+    );
   }, [filtered]);
 
   const globalBestDeal = useMemo(() => {
@@ -202,6 +234,12 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
 
   const activeFilterTags = useMemo(() => {
     const tags: { label: string; onRemove: () => void }[] = [];
+    selectedSources.forEach((source) => {
+      tags.push({
+        label: source,
+        onRemove: () => toggle(setSelectedSources)(source),
+      });
+    });
     selectedChips.forEach((chip) => {
       tags.push({
         label: chip,
@@ -227,7 +265,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       });
     });
     return tags;
-  }, [selectedChips, selectedMemories, selectedStorages, selectedScreenSizes]);
+  }, [selectedChips, selectedMemories, selectedStorages, selectedScreenSizes, selectedSources]);
 
   return (
     <>
@@ -255,6 +293,10 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
         selectedScreenSizes={selectedScreenSizes}
         onToggleScreenSize={toggle(setSelectedScreenSizes)}
         onClearScreenSizes={clear(setSelectedScreenSizes)}
+        sources={sources}
+        selectedSources={selectedSources}
+        onToggleSource={toggle(setSelectedSources)}
+        onClearSources={clear(setSelectedSources)}
         sort={sort}
         onSort={setSort}
         onClearAll={clearAll}
@@ -281,10 +323,10 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((product) => (
             <ProductCard
-              key={product.partNumber}
+              key={productKey(product)}
               product={product}
-              isBestDeal={product.partNumber === bestDealPartNumber}
-              isTopDiscount={product.partNumber === topDiscountPartNumber}
+              isBestDeal={productKey(product) === bestDealKey}
+              isTopDiscount={productKey(product) === topDiscountKey}
               onShowHistory={setHistoryProduct}
             />
           ))}
@@ -309,7 +351,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {unavailableProducts.map((product) => (
               <ProductCard
-                key={product.partNumber}
+                key={productKey(product)}
                 product={product}
                 isExpired
                 onShowHistory={setHistoryProduct}

@@ -74,7 +74,8 @@ export function PriceHistoryPanel({
           {/* Chart */}
           <div className="flex-1 px-5 py-6 overflow-y-auto">
             <PriceHistoryChart
-              partNumber={product.partNumber}
+              source={product.source}
+              productId={product.productId}
               originalPrice={product.originalPrice}
             />
           </div>

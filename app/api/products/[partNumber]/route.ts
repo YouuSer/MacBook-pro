@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { priceHistory } from "@/lib/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { toApiError } from "@/lib/api-error";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ partNumber: string }> }
 ) {
   try {
     const { partNumber } = await params;
     const decoded = decodeURIComponent(partNumber);
     const db = getDb();
+
+    const url = new URL(request.url);
+    const source = url.searchParams.get("source") ?? "apple_refurb";
 
     const history = await db
       .select({
@@ -20,7 +23,12 @@ export async function GET(
         lastSeenAt: priceHistory.lastSeenAt,
       })
       .from(priceHistory)
-      .where(eq(priceHistory.partNumber, decoded))
+      .where(
+        and(
+          eq(priceHistory.source, source),
+          eq(priceHistory.productId, decoded)
+        )
+      )
       .orderBy(asc(priceHistory.firstSeenAt));
 
     return NextResponse.json(history);

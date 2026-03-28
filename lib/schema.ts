@@ -1,7 +1,8 @@
-import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, real, integer, primaryKey } from "drizzle-orm/sqlite-core";
 
 export const products = sqliteTable("products", {
-  partNumber: text("part_number").primaryKey(),
+  source: text("source").notNull().default("apple_refurb"),
+  productId: text("product_id").notNull(),
   title: text("title").notNull(),
   currentPrice: real("current_price").notNull(),
   originalPrice: real("original_price").notNull(),
@@ -17,13 +18,15 @@ export const products = sqliteTable("products", {
   imageUrl: text("image_url"),
   firstSeen: text("first_seen").notNull(),
   lastSeen: text("last_seen").notNull(),
-});
+  condition: text("condition"),
+}, (table) => [
+  primaryKey({ columns: [table.source, table.productId] }),
+]);
 
 export const priceHistory = sqliteTable("price_history", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  partNumber: text("part_number")
-    .notNull()
-    .references(() => products.partNumber),
+  source: text("source").notNull().default("apple_refurb"),
+  productId: text("product_id").notNull(),
   price: real("price").notNull(),
   firstSeenAt: text("first_seen_at").notNull(),
   lastSeenAt: text("last_seen_at").notNull(),
@@ -31,6 +34,7 @@ export const priceHistory = sqliteTable("price_history", {
 
 export const scrapeRuns = sqliteTable("scrape_runs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  source: text("source").notNull().default("apple_refurb"),
   scrapedAt: text("scraped_at").notNull(),
   totalFound: integer("total_found"),
   proChipCount: integer("pro_chip_count"),

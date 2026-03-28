@@ -29,7 +29,8 @@ export default async function Home() {
     ).toISOString();
 
     const allProducts = rows.map((row) => ({
-      partNumber: row.partNumber,
+      source: row.source as Product["source"],
+      productId: row.productId,
       title: row.title,
       currentPrice: row.currentPrice,
       originalPrice: row.originalPrice,
@@ -46,6 +47,7 @@ export default async function Home() {
       firstSeen: row.firstSeen,
       lastSeen: row.lastSeen,
       isNew: row.firstSeen >= twentyFourHoursAgo,
+      condition: row.condition ?? undefined,
     }));
 
     if (lastScrapedAt) {
@@ -64,9 +66,9 @@ export default async function Home() {
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[var(--bg)]/80 border-b border-[var(--border)]/50">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-base font-semibold">MacBook Pro Refurb</span>
+            <span className="text-base font-semibold">MacBook Pro Monitor</span>
             <span className="hidden sm:inline text-xs text-[var(--text-tertiary)]">
-              Apple France
+              Apple France & Amazon
             </span>
           </div>
           <ThemeToggle />

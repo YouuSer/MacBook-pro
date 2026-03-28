@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { scrapeRuns } from "@/lib/schema";
-import { runScrapeJob } from "@/lib/scrape-job";
+import { runAllScrapeJobs } from "@/lib/scrape-job";
 import { toApiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
@@ -19,14 +19,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await runScrapeJob();
-    return NextResponse.json({ success: true, ...result });
+    const results = await runAllScrapeJobs();
+    return NextResponse.json({ success: true, results });
   } catch (error) {
     const apiError = toApiError(error, "SCRAPE_FAILED");
 
     try {
       const db = getDb();
       await db.insert(scrapeRuns).values({
+        source: "apple_refurb",
         scrapedAt: new Date().toISOString(),
         status: "error",
         errorMessage: apiError.error,

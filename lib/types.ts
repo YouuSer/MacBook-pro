@@ -1,3 +1,5 @@
+import type { ProductSource } from "./scrapers/types";
+
 // Types pour les données brutes Apple Refurb
 
 export interface AppleRefurbBootstrap {
@@ -60,7 +62,8 @@ export interface AppleRefurbTile {
 // Types internes pour l'app
 
 export interface Product {
-  partNumber: string;
+  source: ProductSource;
+  productId: string;
   title: string;
   currentPrice: number;
   originalPrice: number;
@@ -77,6 +80,7 @@ export interface Product {
   firstSeen: string;
   lastSeen: string;
   isNew: boolean;
+  condition?: string;
 }
 
 export interface PriceHistoryEntry {
@@ -84,3 +88,5 @@ export interface PriceHistoryEntry {
   firstSeenAt: string;
   lastSeenAt: string;
 }
+
+export type { ProductSource } from "./scrapers/types";
