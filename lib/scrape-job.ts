@@ -13,12 +13,18 @@ export async function runScrapeJob() {
   const existing = await db.select().from(products);
   const existingMap = new Map(existing.map((p) => [p.partNumber, p]));
 
+  // Récupérer le dernier scrape run pour détecter les réapparitions
+  const lastRun = await db.select().from(scrapeRuns).orderBy(desc(scrapeRuns.scrapedAt)).limit(1);
+  const lastScrapedAt = lastRun[0]?.scrapedAt ?? null;
+
   let newCount = 0;
 
   for (const p of scraped) {
     const exists = existingMap.get(p.partNumber);
 
     if (exists) {
+      // Si le deal était expiré (lastSeen != dernier scrape), c'est une réapparition
+      const isReappearing = lastScrapedAt && exists.lastSeen !== lastScrapedAt;
       await db
         .update(products)
         .set({
@@ -27,6 +33,7 @@ export async function runScrapeJob() {
           savingsPercent: p.savingsPercent,
           savings: p.savings,
           lastSeen: now,
+          ...(isReappearing ? { firstSeen: now } : {}),
         })
         .where(eq(products.partNumber, p.partNumber));
     } else {
@@ -52,6 +59,9 @@ export async function runScrapeJob() {
     }
 
     // Consolidate price history: update lastSeenAt if price unchanged, otherwise insert new row
+    // Si réapparition après expiration, toujours créer une nouvelle ligne (date de fin figée)
+    const isReappearing = lastScrapedAt && exists?.lastSeen !== lastScrapedAt;
+
     const lastEntry = await db
       .select()
       .from(priceHistory)
@@ -59,7 +69,7 @@ export async function runScrapeJob() {
       .orderBy(desc(priceHistory.lastSeenAt))
       .limit(1);
 
-    if (lastEntry.length > 0 && lastEntry[0].price === p.currentPrice) {
+    if (!isReappearing && lastEntry.length > 0 && lastEntry[0].price === p.currentPrice) {
       await db
         .update(priceHistory)
         .set({ lastSeenAt: now })
