@@ -5,6 +5,10 @@ import { FilterDropdown } from "./FilterDropdown";
 export type SortOption = "best-deal" | "discount" | "price-asc" | "price-desc" | "newest";
 
 interface FilterBarProps {
+  productLines: string[];
+  selectedProductLines: Set<string>;
+  onToggleProductLine: (productLine: string) => void;
+  onClearProductLines: () => void;
   chips: string[];
   selectedChips: Set<string>;
   onToggleChip: (chip: string) => void;
@@ -30,6 +34,10 @@ interface FilterBarProps {
 }
 
 export function FilterBar({
+  productLines,
+  selectedProductLines,
+  onToggleProductLine,
+  onClearProductLines,
   chips,
   selectedChips,
   onToggleChip,
@@ -56,6 +64,13 @@ export function FilterBar({
   return (
     <div className="sticky top-14 z-40 -mx-4 px-4 py-3 backdrop-blur-xl bg-[var(--bg)]/80 border-b border-[var(--border)]/50">
       <div className="flex items-center gap-2 flex-wrap">
+        <FilterDropdown
+          label="Gamme"
+          options={productLines}
+          selected={selectedProductLines}
+          onToggle={onToggleProductLine}
+          onClear={onClearProductLines}
+        />
         <FilterDropdown
           label="Puce"
           options={chips}
@@ -91,7 +106,7 @@ export function FilterBar({
             onChange={(e) => onSort(e.target.value as SortOption)}
             className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--fg)] transition-colors focus:outline-none focus:border-[var(--accent-blue)] hover:border-[var(--border-hover)]"
           >
-            <option value="best-deal">Meilleur deal</option>
+            <option value="best-deal">Top dev</option>
             <option value="discount">Top remise</option>
             <option value="price-asc">Prix croissant</option>
             <option value="price-desc">Prix decroissant</option>
@@ -126,7 +141,7 @@ export function FilterBar({
             Tout effacer
           </button>
           <span className="ml-auto text-xs text-[var(--text-secondary)]">
-            <span className="font-semibold text-[var(--fg)]">{resultCount}</span> MacBook Pro
+            <span className="font-semibold text-[var(--fg)]">{resultCount}</span> MacBook
           </span>
         </div>
       )}

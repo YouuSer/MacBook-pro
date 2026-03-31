@@ -1,33 +1,36 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import {
+  formatScreenSize,
+  getProductLineLabel,
+} from "@/lib/product-catalog";
 import type { Product } from "@/lib/types";
 import { Badge } from "./Badge";
 
-interface HeroDealProps {
-  bestDeal: Product;
-  topDiscount: Product;
+export interface HeroPick {
+  product: Product;
+  score: number;
+  reasons: string[];
+  label: string;
 }
 
-const SCREEN_LABELS: Record<string, string> = {
-  "14": '14"',
-  "16": '16"',
-};
-
 interface SlideConfig {
-  product: Product;
+  pick: HeroPick;
   label: string;
   color: string;
   icon: React.ReactNode;
 }
 
-function HeroSlide({ product }: { product: Product }) {
+interface HeroDealProps {
+  picks: HeroPick[];
+}
+
+function HeroSlide({ pick }: { pick: HeroPick }) {
+  const { product, score, reasons } = pick;
   const discountPercent = Math.round(product.savingsPercent);
   const savingsAmount = product.originalPrice - product.currentPrice;
-  const rawScreen = product.screenSize?.replace(/[^0-9]/g, "") ?? "";
-  const screenLabel = rawScreen
-    ? (SCREEN_LABELS[rawScreen] ?? `${rawScreen}"`)
-    : null;
+  const screenLabel = formatScreenSize(product.screenSize);
 
   return (
     <div className="flex flex-col sm:flex-row gap-6 p-5">
@@ -43,6 +46,7 @@ function HeroSlide({ product }: { product: Product }) {
       <div className="flex-1 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="chip">{product.chip}</Badge>
+          <Badge variant="line">{getProductLineLabel(product.productLine)}</Badge>
           {screenLabel && (
             <span className="text-xs text-[var(--text-secondary)]">{screenLabel}</span>
           )}
@@ -52,6 +56,12 @@ function HeroSlide({ product }: { product: Product }) {
         <h2 className="text-lg font-semibold leading-snug line-clamp-2">
           {product.title}
         </h2>
+
+        {reasons.length > 0 && (
+          <p className="text-sm text-[var(--text-secondary)]">
+            {reasons.join(" · ")}
+          </p>
+        )}
 
         <div className="flex items-center gap-3 flex-wrap">
           {product.memory && (
@@ -75,6 +85,15 @@ function HeroSlide({ product }: { product: Product }) {
               </span>
             </>
           )}
+          <>
+            <span className="text-[var(--border)]" aria-hidden>·</span>
+            <span
+              className="text-xs font-medium text-[var(--text-secondary)]"
+              title="Score developpeur : adequation dev plus opportunite de prix"
+            >
+              Score {score.toFixed(0)}
+            </span>
+          </>
         </div>
 
         <div className="flex items-baseline gap-3">
@@ -115,30 +134,31 @@ function HeroSlide({ product }: { product: Product }) {
   );
 }
 
-export function HeroDeal({ bestDeal, topDiscount }: HeroDealProps) {
-  const slides: SlideConfig[] = [
-    {
-      product: bestDeal,
-      label: "Meilleur deal",
-      color: "bg-amber-500",
-      icon: (
+export function HeroDeal({ picks }: HeroDealProps) {
+  const slides: SlideConfig[] = picks.map((pick) => ({
+    pick,
+    label: pick.label,
+    color:
+      pick.product.productLine === "air"
+        ? "bg-sky-500"
+        : "bg-amber-500",
+    icon:
+      pick.product.productLine === "air" ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+          <path d="M20 16.5A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5Z" />
+          <path d="M8 19h8" />
+        </svg>
+      ) : (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
           <path d="M22 4L12 14.01l-3-3" />
         </svg>
       ),
-    },
-    {
-      product: topDiscount,
-      label: "Top remise",
-      color: "bg-emerald-500 dark:bg-emerald-400",
-      icon: (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-          <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
-        </svg>
-      ),
-    },
-  ];
+  }));
+
+  if (slides.length === 0) {
+    return null;
+  }
 
   const [current, setCurrent] = useState(0);
   const slide = slides[current];
@@ -151,7 +171,10 @@ export function HeroDeal({ bestDeal, topDiscount }: HeroDealProps) {
     setCurrent((c) => (c + 1) % slides.length);
   }, []);
 
-  const borderColor = current === 0 ? "border-amber-500/30" : "border-emerald-500/30 dark:border-emerald-400/30";
+  const borderColor =
+    slide.pick.product.productLine === "air"
+      ? "border-sky-500/30"
+      : "border-amber-500/30";
 
   return (
     <div className={`rounded-2xl border ${borderColor} bg-[var(--surface)] shadow-[var(--shadow-sm)] overflow-hidden`}>
@@ -189,7 +212,7 @@ export function HeroDeal({ bestDeal, topDiscount }: HeroDealProps) {
       </div>
 
       {/* Slide */}
-      <HeroSlide product={slide.product} />
+      <HeroSlide pick={slide.pick} />
 
       {/* Dots */}
       <div className="flex items-center justify-center gap-1.5 pb-4">
@@ -199,7 +222,11 @@ export function HeroDeal({ bestDeal, topDiscount }: HeroDealProps) {
             onClick={() => setCurrent(i)}
             className={`rounded-full transition-all ${
               i === current
-                ? `w-6 h-2 ${i === 0 ? "bg-amber-500" : "bg-emerald-500 dark:bg-emerald-400"}`
+                ? `w-6 h-2 ${
+                    s.pick.product.productLine === "air"
+                      ? "bg-sky-500"
+                      : "bg-amber-500"
+                  }`
                 : "w-2 h-2 bg-[var(--border)] hover:bg-[var(--border-hover)]"
             }`}
             aria-label={`Voir ${s.label}`}

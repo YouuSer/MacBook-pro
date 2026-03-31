@@ -1,5 +1,6 @@
 "use client";
 
+import { getProductLineLabel } from "@/lib/product-catalog";
 import type { Product } from "@/lib/types";
 import { PriceHistoryChart } from "./PriceHistoryChart";
 import { Badge } from "./Badge";
@@ -58,6 +59,7 @@ export function PriceHistoryPanel({
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <Badge variant="chip">{product.chip}</Badge>
+                <Badge variant="line">{getProductLineLabel(product.productLine)}</Badge>
               </div>
               <p className="text-sm font-semibold line-clamp-1">{product.title}</p>
               <div className="flex items-baseline gap-2 mt-0.5">

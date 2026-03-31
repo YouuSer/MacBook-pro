@@ -1,8 +1,11 @@
-import { getDb } from "@/lib/db";
+import { getDb, inspectDbConfig } from "@/lib/db";
 import { products, scrapeRuns } from "@/lib/schema";
+import { resolveProductLine } from "@/lib/product-catalog";
 import { desc } from "drizzle-orm";
 import type { Product } from "@/lib/types";
+import { toApiError } from "@/lib/api-error";
 import { ProductGrid } from "./components/ProductGrid";
+import { ScrapeButton } from "./components/ScrapeButton";
 import { ThemeToggle } from "./components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +14,15 @@ export default async function Home() {
   let availableProducts: Product[] = [];
   let unavailableProducts: Product[] = [];
   let lastScrapedAt: string | null = null;
+  let loadError: ReturnType<typeof toApiError> | null = null;
+
+  const dbConfig = inspectDbConfig();
+  const dbTargetLabel =
+    dbConfig.kind === "sqlite-local"
+      ? `SQLite locale (${dbConfig.target})`
+      : dbConfig.kind === "turso"
+        ? `Turso (${dbConfig.target})`
+        : "configuration invalide";
 
   try {
     const db = getDb();
@@ -35,6 +47,7 @@ export default async function Home() {
       originalPrice: row.originalPrice,
       savingsPercent: row.savingsPercent,
       savings: row.savings ?? "",
+      productLine: resolveProductLine(row.productLine, row.title) ?? "pro",
       chip: row.chip ?? "Unknown",
       screenSize: row.screenSize ?? "",
       memory: row.memory ?? "",
@@ -54,8 +67,9 @@ export default async function Home() {
     } else {
       availableProducts = allProducts;
     }
-  } catch {
-    // DB not initialized yet — show empty state
+  } catch (error) {
+    loadError = toApiError(error, "PRODUCTS_LOAD_FAILED");
+    console.error("Failed to load home page data", error);
   }
 
   return (
@@ -64,21 +78,43 @@ export default async function Home() {
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[var(--bg)]/80 border-b border-[var(--border)]/50">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-base font-semibold">MacBook Pro Refurb</span>
+            <span className="text-base font-semibold">MacBook Air & Pro Refurb</span>
             <span className="hidden sm:inline text-xs text-[var(--text-tertiary)]">
               Apple France
             </span>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ScrapeButton />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {availableProducts.length === 0 && unavailableProducts.length === 0 ? (
+        {loadError ? (
+          <div className="max-w-2xl mx-auto py-16">
+            <div className="rounded-3xl border border-red-500/20 bg-red-500/8 px-6 py-5 text-left">
+              <p className="text-base font-semibold text-[var(--text-primary)] mb-2">
+                Impossible de charger les produits
+              </p>
+              <p className="text-sm text-[var(--text-secondary)]">
+                {loadError.error}
+              </p>
+              <p className="mt-3 text-xs text-[var(--text-tertiary)]">
+                Source DB : {dbTargetLabel}
+              </p>
+              {dbConfig.kind === "invalid" && dbConfig.error && (
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                  Detail config : {dbConfig.error}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : availableProducts.length === 0 && unavailableProducts.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-base text-[var(--text-secondary)] mb-4">
-              Aucun produit pour le moment
+              Aucun MacBook Air ou Pro pour le moment
             </p>
             <p className="text-sm text-[var(--text-tertiary)]">
               Lancez un premier scan en appelant{" "}

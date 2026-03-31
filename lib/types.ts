@@ -1,3 +1,5 @@
+import type { ProductLine } from "./product-catalog";
+
 // Types pour les données brutes Apple Refurb
 
 export interface AppleRefurbBootstrap {
@@ -66,6 +68,7 @@ export interface Product {
   originalPrice: number;
   savingsPercent: number;
   savings: string;
+  productLine: ProductLine;
   chip: string;
   screenSize: string;
   memory: string;

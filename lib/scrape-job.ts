@@ -1,7 +1,7 @@
 import { getDb } from "./db";
 import { products, priceHistory, scrapeRuns } from "./schema";
 import { scrapeAppleRefurb } from "./scraper";
-import { eq, and, desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export async function runScrapeJob() {
   const db = getDb();
@@ -28,10 +28,20 @@ export async function runScrapeJob() {
       await db
         .update(products)
         .set({
+          title: p.title,
           currentPrice: p.currentPrice,
           originalPrice: p.originalPrice,
           savingsPercent: p.savingsPercent,
           savings: p.savings,
+          productLine: p.productLine,
+          chip: p.chip,
+          screenSize: p.screenSize,
+          memory: p.memory,
+          storage: p.storage,
+          color: p.color,
+          releaseYear: p.releaseYear,
+          productUrl: p.productUrl,
+          imageUrl: p.imageUrl,
           lastSeen: now,
           ...(isReappearing ? { firstSeen: now } : {}),
         })
@@ -44,6 +54,7 @@ export async function runScrapeJob() {
         originalPrice: p.originalPrice,
         savingsPercent: p.savingsPercent,
         savings: p.savings,
+        productLine: p.productLine,
         chip: p.chip,
         screenSize: p.screenSize,
         memory: p.memory,
@@ -87,10 +98,15 @@ export async function runScrapeJob() {
   await db.insert(scrapeRuns).values({
     scrapedAt: now,
     totalFound,
-    proChipCount: scraped.length,
+    trackedProductCount: scraped.length,
     newProducts: newCount,
     status: "success",
   });
 
-  return { totalFound, proChipCount: scraped.length, newProducts: newCount, scrapedAt: now };
+  return {
+    totalFound,
+    trackedProductCount: scraped.length,
+    newProducts: newCount,
+    scrapedAt: now,
+  };
 }
