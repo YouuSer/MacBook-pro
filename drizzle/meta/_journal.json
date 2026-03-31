@@ -8,6 +8,13 @@
       "when": 1774653159757,
       "tag": "0000_nebulous_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1774972034000,
+      "tag": "0001_swift_macbook_catalog",
+      "breakpoints": true
     }
   ]
 }

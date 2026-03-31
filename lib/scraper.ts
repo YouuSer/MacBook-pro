@@ -1,15 +1,14 @@
+import type { ProductLine } from "./product-catalog";
+import {
+  getProductLineFromTitle,
+  isTrackedMacbookTitle,
+  normalizeAppleText,
+  parseChip,
+} from "./product-catalog";
 import type { AppleRefurbBootstrap, AppleRefurbTile } from "./types";
 
 const REFURB_URL =
-  "https://www.apple.com/fr/shop/refurbished/mac/macbook-pro";
-
-// \s doesn't match \u00a0 (non-breaking space) — Apple uses them in titles
-const PRO_CHIP_REGEX = /M[2-9][\s\u00a0]*Pro/i;
-
-function parseChip(title: string): string | null {
-  const match = title.match(PRO_CHIP_REGEX);
-  return match ? match[0].replace(/\s+/g, " ") : null;
-}
+  "https://www.apple.com/fr/shop/refurbished/mac";
 
 function getImageUrl(tile: AppleRefurbTile): string {
   const jpeg = tile.image.sources.find((s) => s.type === "image/jpeg");
@@ -23,6 +22,7 @@ export interface ScrapedProduct {
   originalPrice: number;
   savingsPercent: number;
   savings: string;
+  productLine: ProductLine;
   chip: string;
   screenSize: string;
   memory: string;
@@ -91,14 +91,17 @@ export async function scrapeAppleRefurb(): Promise<{
   const data: AppleRefurbBootstrap = JSON.parse(html.slice(jsonStart, jsonEnd));
   const totalFound = data.tiles.length;
 
-  // Filter for MacBook Pro with Pro chips only
-  const proTiles = data.tiles.filter(
-    (tile) =>
-      PRO_CHIP_REGEX.test(tile.title) &&
-      /macbook[\s\u00a0]*pro/i.test(tile.title)
-  );
+  const trackedTiles = data.tiles.filter((tile) => isTrackedMacbookTitle(tile.title));
 
-  const products: ScrapedProduct[] = proTiles.map((tile) => {
+  const products: ScrapedProduct[] = trackedTiles.flatMap((tile) => {
+    const normalizedTitle = normalizeAppleText(tile.title);
+    const productLine = getProductLineFromTitle(normalizedTitle);
+    const chip = parseChip(normalizedTitle);
+
+    if (!productLine || !chip) {
+      return [];
+    }
+
     const currentPrice = parseFloat(tile.price.currentPrice.raw_amount);
     const originalPrice =
       tile.price.originalProductAmount ??
@@ -107,14 +110,15 @@ export async function scrapeAppleRefurb(): Promise<{
         : currentPrice);
     const dims = tile.filters.dimensions;
 
-    return {
+    return [{
       partNumber: tile.partNumber,
-      title: tile.title,
+      title: normalizedTitle,
       currentPrice,
       originalPrice,
       savingsPercent: ((originalPrice - currentPrice) / originalPrice) * 100,
       savings: tile.price.savings,
-      chip: parseChip(tile.title) ?? "Unknown",
+      productLine,
+      chip,
       screenSize: dims.dimensionScreensize ?? "",
       memory: dims.tsMemorySize ?? "",
       storage: dims.dimensionCapacity ?? "",
@@ -122,7 +126,7 @@ export async function scrapeAppleRefurb(): Promise<{
       releaseYear: dims.dimensionRelYear ?? "",
       productUrl: `https://www.apple.com${tile.productDetailsUrl}`,
       imageUrl: getImageUrl(tile),
-    };
+    }];
   });
 
   return { products, totalFound };

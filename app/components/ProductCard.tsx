@@ -1,32 +1,37 @@
 "use client";
 
+import {
+  formatScreenSize,
+  getProductLineLabel,
+} from "@/lib/product-catalog";
 import type { Product } from "@/lib/types";
 import { Badge } from "./Badge";
-import { computeDealScore } from "@/lib/deal-score";
 
 interface ProductCardProps {
   product: Product;
-  isBestDeal?: boolean;
+  dealScore?: number;
+  topLabel?: string;
+  topReasons?: string[];
   isTopDiscount?: boolean;
   isExpired?: boolean;
   onShowHistory?: (product: Product) => void;
 }
 
-const SCREEN_LABELS: Record<string, string> = {
-  "14": '14"',
-  "16": '16"',
-};
-
 const COLOR_MAP: Record<string, { hex: string; label: string; textDark?: boolean }> = {
   spacegray: { hex: "#7d7e80", label: "Gris sideral", textDark: false },
   spaceblack: { hex: "#393b3d", label: "Noir sideral", textDark: false },
   silver: { hex: "#c0c1c4", label: "Argent", textDark: true },
+  starlight: { hex: "#f3e7cf", label: "Lumiere stellaire", textDark: true },
+  midnight: { hex: "#1f2937", label: "Minuit", textDark: false },
   midnightblue: { hex: "#1f2937", label: "Minuit", textDark: false },
+  skyblue: { hex: "#c9e3f3", label: "Bleu ciel", textDark: true },
 };
 
 export function ProductCard({
   product,
-  isBestDeal = false,
+  dealScore,
+  topLabel,
+  topReasons = [],
   isTopDiscount = false,
   isExpired = false,
   onShowHistory,
@@ -34,13 +39,10 @@ export function ProductCard({
   const discountPercent = Math.round(product.savingsPercent);
   const hasDiscount =
     discountPercent >= 1 && product.currentPrice < product.originalPrice;
-  const rawScreen = product.screenSize?.replace(/[^0-9]/g, "") ?? "";
-  const screenLabel = rawScreen
-    ? (SCREEN_LABELS[rawScreen] ?? `${rawScreen}"`)
-    : null;
+  const screenLabel = formatScreenSize(product.screenSize);
   const savingsAmount = product.originalPrice - product.currentPrice;
-  const colorInfo = product.color ? COLOR_MAP[product.color] : null;
-  const dealScore = computeDealScore(product);
+  const colorKey = product.color.trim().toLowerCase();
+  const colorInfo = colorKey ? COLOR_MAP[colorKey] ?? null : null;
 
   return (
     <div
@@ -48,7 +50,7 @@ export function ProductCard({
         isExpired
           ? "border-[var(--border)] opacity-70"
           : `hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
-              isBestDeal
+              topLabel
                 ? "ring-2 ring-amber-500 border-amber-500/30"
                 : isTopDiscount
                   ? "ring-2 ring-[var(--accent-green)] border-[var(--accent-green)]/30"
@@ -79,13 +81,13 @@ export function ProductCard({
               {product.isNew && (
                 <Badge variant="new">Nouveau</Badge>
               )}
-              {isBestDeal && (
+              {topLabel && (
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-amber-500/30">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <path d="M22 4L12 14.01l-3-3" />
                   </svg>
-                  Meilleur deal
+                  {topLabel}
                 </div>
               )}
               {isTopDiscount && (
@@ -111,6 +113,7 @@ export function ProductCard({
         {/* Chip badge + color tag */}
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="chip">{product.chip || "—"}</Badge>
+          <Badge variant="line">{getProductLineLabel(product.productLine)}</Badge>
           {colorInfo && (
             <span
               className={`inline-flex items-center px-2.5 py-[5px] rounded-full text-[11px] leading-none font-semibold border border-transparent ${
@@ -140,27 +143,49 @@ export function ProductCard({
           <p className={`text-xs font-medium ${hasDiscount ? "text-emerald-500 dark:text-emerald-400" : "invisible"}`}>
             Économisez {savingsAmount.toLocaleString("fr-FR")} €
           </p>
-          <span className="text-[11px] font-semibold text-[var(--text-tertiary)]" title="Deal score : rapport qualite/prix">
-            Score {dealScore.toFixed(1)}
-          </span>
+          {typeof dealScore === "number" && (
+            <span className="text-[11px] font-semibold text-[var(--text-tertiary)]" title="Score developpeur : adequation dev plus opportunite de prix">
+              Score {dealScore.toFixed(0)}
+            </span>
+          )}
         </div>
 
-        {/* Date d'apparition du deal */}
-        <p className="text-[11px] text-[var(--text-tertiary)]">
-          Apparu le{" "}
-          {new Date(product.firstSeen).toLocaleDateString("fr-FR", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            timeZone: "Europe/Paris",
-          })}
-          {" "}
-          {new Date(product.firstSeen).toLocaleTimeString("fr-FR", {
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: "Europe/Paris",
-          })}
-        </p>
+        {topReasons.length > 0 && (
+          <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2">
+            {topReasons.join(" · ")}{" "}
+            <span className="text-[var(--text-tertiary)]">
+              · Vu le{" "}
+              {new Date(product.firstSeen).toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+                timeZone: "Europe/Paris",
+              })}{" "}
+              {new Date(product.firstSeen).toLocaleTimeString("fr-FR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "Europe/Paris",
+              })}
+            </span>
+          </p>
+        )}
+
+        {!topReasons.length && (
+          <p className="text-[11px] text-[var(--text-tertiary)]">
+            Vu le{" "}
+            {new Date(product.firstSeen).toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+              timeZone: "Europe/Paris",
+            })}{" "}
+            {new Date(product.firstSeen).toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "Europe/Paris",
+            })}
+          </p>
+        )}
 
         {/* Specs grid */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">

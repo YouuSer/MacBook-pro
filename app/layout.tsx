@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Apple Refurb Monitor - MacBook Pro",
+  title: "Apple Refurb Monitor - MacBook Air & Pro",
   description:
-    "Surveillez les MacBook Pro reconditionnés sur le store Apple France",
+    "Surveillez les MacBook Air et MacBook Pro reconditionnes sur le store Apple France",
 };
 
 const themeScript = `

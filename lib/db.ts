@@ -1,8 +1,8 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import * as schema from "./schema";
-
-const LOCAL_DB_URL = "file:./local.db";
 
 let dbInstance: ReturnType<typeof drizzle> | null = null;
 
@@ -21,6 +21,46 @@ function normalizeEnvValue(value: string | undefined): string | undefined {
 
   return trimmed;
 }
+
+function resolveLocalDbPath() {
+  const configuredPath = normalizeEnvValue(process.env.LOCAL_DB_PATH);
+  if (configuredPath) {
+    return path.resolve(configuredPath);
+  }
+
+  let currentDir = path.resolve(process.cwd());
+
+  while (true) {
+    const localDbPath = path.join(currentDir, "local.db");
+    const packageJsonPath = path.join(currentDir, "package.json");
+
+    if (existsSync(localDbPath) || existsSync(packageJsonPath)) {
+      return localDbPath;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return path.resolve(process.cwd(), "local.db");
+    }
+
+    currentDir = parentDir;
+  }
+}
+
+function formatDbTarget(url: string) {
+  if (url.startsWith("file:")) {
+    return url.slice("file:".length);
+  }
+
+  try {
+    const parsed = new URL(url.replace(/^libsql:\/\//, "https://"));
+    return parsed.host + parsed.pathname;
+  } catch {
+    return "configured remote database";
+  }
+}
+
+const LOCAL_DB_URL = `file:${resolveLocalDbPath()}`;
 
 function resolveDbConfig() {
   const url = normalizeEnvValue(process.env.TURSO_DATABASE_URL);
@@ -53,6 +93,30 @@ function resolveDbConfig() {
   }
 
   return { url, authToken };
+}
+
+export function inspectDbConfig() {
+  try {
+    const { url } = resolveDbConfig();
+
+    if (url.startsWith("file:")) {
+      return {
+        kind: "sqlite-local" as const,
+        target: formatDbTarget(url),
+      };
+    }
+
+    return {
+      kind: "turso" as const,
+      target: formatDbTarget(url),
+    };
+  } catch (error) {
+    return {
+      kind: "invalid" as const,
+      target: null,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }
 
 export function getDb() {

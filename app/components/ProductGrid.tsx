@@ -1,22 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  formatScreenSize,
+  getProductLineLabel,
+  normalizeScreenSize,
+} from "@/lib/product-catalog";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "./ProductCard";
 import { FilterBar, type SortOption } from "./FilterBar";
 import { PriceHistoryPanel } from "./PriceHistoryPanel";
-import { HeroDeal } from "./HeroDeal";
+import { HeroDeal, type HeroPick } from "./HeroDeal";
 import { StatsStrip } from "./StatsStrip";
-import { computeDealScore } from "@/lib/deal-score";
+import { getDealInsights } from "@/lib/deal-score";
 
 interface ProductGridProps {
   products: Product[];
   unavailableProducts?: Product[];
-}
-
-function normalizeScreenSize(value: string): string {
-  const match = value.trim().match(/\d+/);
-  return match ? match[0] : "";
 }
 
 function normalizeSpecValue(value: string): string {
@@ -52,18 +52,20 @@ function sortSpecValues(values: string[]): string[] {
   });
 }
 
-const SCREEN_LABELS: Record<string, string> = {
-  "14": '14"',
-  "16": '16"',
-};
-
 export function ProductGrid({ products, unavailableProducts = [] }: ProductGridProps) {
+  const [selectedProductLines, setSelectedProductLines] = useState<Set<string>>(new Set());
   const [selectedChips, setSelectedChips] = useState<Set<string>>(new Set());
   const [selectedMemories, setSelectedMemories] = useState<Set<string>>(new Set());
   const [selectedStorages, setSelectedStorages] = useState<Set<string>>(new Set());
   const [selectedScreenSizes, setSelectedScreenSizes] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<SortOption>("best-deal");
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
+
+  const productLines = useMemo(() => {
+    const allOptions = ["Air", "Pro"];
+    const available = new Set(products.map((p) => getProductLineLabel(p.productLine)));
+    return allOptions.filter((option) => available.has(option));
+  }, [products]);
 
   const chips = useMemo(() => {
     const set = new Set(products.map((p) => p.chip).filter(Boolean));
@@ -92,7 +94,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     );
     return Array.from(set)
       .sort((a, b) => Number(a) - Number(b))
-      .map((s) => SCREEN_LABELS[s] ?? s);
+      .map((s) => formatScreenSize(s) ?? s);
   }, [products]);
 
   const toggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) => (value: string) => {
@@ -109,6 +111,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
   };
 
   const clearAll = () => {
+    setSelectedProductLines(new Set());
     setSelectedChips(new Set());
     setSelectedMemories(new Set());
     setSelectedStorages(new Set());
@@ -116,13 +119,34 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
   };
 
   const hasActiveFilters =
+    selectedProductLines.size > 0 ||
     selectedChips.size > 0 ||
     selectedMemories.size > 0 ||
     selectedStorages.size > 0 ||
     selectedScreenSizes.size > 0;
 
+  const dealInsightsByPartNumber = useMemo(() => {
+    const grouped = {
+      air: products.filter((product) => product.productLine === "air"),
+      pro: products.filter((product) => product.productLine === "pro"),
+    };
+
+    return new Map(
+      products.map((product) => [
+        product.partNumber,
+        getDealInsights(product, grouped[product.productLine]),
+      ])
+    );
+  }, [products]);
+
   const filtered = useMemo(() => {
     let result = products;
+
+    if (selectedProductLines.size > 0) {
+      result = result.filter((p) =>
+        selectedProductLines.has(getProductLineLabel(p.productLine))
+      );
+    }
 
     if (selectedChips.size > 0) {
       result = result.filter((p) => selectedChips.has(p.chip));
@@ -142,7 +166,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
 
     if (selectedScreenSizes.size > 0) {
       const rawSizes = new Set(
-        Array.from(selectedScreenSizes).map((s) => s.replace('"', "").replace('"', ""))
+        Array.from(selectedScreenSizes).map((s) => s.replace(/"/g, ""))
       );
       result = result.filter((p) =>
         rawSizes.has(normalizeScreenSize(p.screenSize))
@@ -151,7 +175,11 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
 
     switch (sort) {
       case "best-deal":
-        result = [...result].sort((a, b) => computeDealScore(b) - computeDealScore(a));
+        result = [...result].sort(
+          (a, b) =>
+            (dealInsightsByPartNumber.get(b.partNumber)?.totalScore ?? 0) -
+            (dealInsightsByPartNumber.get(a.partNumber)?.totalScore ?? 0)
+        );
         break;
       case "discount":
         result = [...result].sort((a, b) => b.savingsPercent - a.savingsPercent);
@@ -170,14 +198,16 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     }
 
     return result;
-  }, [products, selectedChips, selectedMemories, selectedStorages, selectedScreenSizes, sort]);
-
-  const bestDealPartNumber = useMemo(() => {
-    if (filtered.length === 0) return null;
-    return filtered.reduce((best, product) =>
-      computeDealScore(product) > computeDealScore(best) ? product : best
-    ).partNumber;
-  }, [filtered]);
+  }, [
+    products,
+    selectedProductLines,
+    selectedChips,
+    selectedMemories,
+    selectedStorages,
+    selectedScreenSizes,
+    sort,
+    dealInsightsByPartNumber,
+  ]);
 
   const topDiscountPartNumber = useMemo(() => {
     if (filtered.length === 0) return null;
@@ -186,22 +216,65 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     ).partNumber;
   }, [filtered]);
 
-  const globalBestDeal = useMemo(() => {
-    if (products.length === 0) return null;
-    return products.reduce((best, p) =>
-      computeDealScore(p) > computeDealScore(best) ? p : best
-    );
-  }, [products]);
+  const topPartNumberByLine = useMemo(() => {
+    const byLine = new Map<"air" | "pro", string>();
 
-  const globalTopDiscount = useMemo(() => {
-    if (products.length === 0) return null;
-    return products.reduce((best, p) =>
-      p.savingsPercent > best.savingsPercent ? p : best
-    );
-  }, [products]);
+    (["air", "pro"] as const).forEach((productLine) => {
+      const lineProducts = filtered.filter((product) => product.productLine === productLine);
+
+      if (lineProducts.length === 0) {
+        return;
+      }
+
+      const topProduct = lineProducts.reduce((best, product) =>
+        (dealInsightsByPartNumber.get(product.partNumber)?.totalScore ?? 0) >
+        (dealInsightsByPartNumber.get(best.partNumber)?.totalScore ?? 0)
+          ? product
+          : best
+      );
+
+      byLine.set(productLine, topProduct.partNumber);
+    });
+
+    return byLine;
+  }, [filtered, dealInsightsByPartNumber]);
+
+  const heroPicks = useMemo<HeroPick[]>(() => {
+    return (["air", "pro"] as const)
+      .flatMap((productLine) => {
+        const lineProducts = products.filter((product) => product.productLine === productLine);
+
+        if (lineProducts.length === 0) {
+          return [];
+        }
+
+        const topProduct = lineProducts.reduce((best, product) =>
+          (dealInsightsByPartNumber.get(product.partNumber)?.totalScore ?? 0) >
+          (dealInsightsByPartNumber.get(best.partNumber)?.totalScore ?? 0)
+            ? product
+            : best
+        );
+        const insights = dealInsightsByPartNumber.get(topProduct.partNumber);
+
+        return insights
+          ? [{
+              product: topProduct,
+              score: insights.totalScore,
+              reasons: insights.reasons,
+              label: productLine === "air" ? "Top Air" : "Top Pro",
+            }]
+          : [];
+      });
+  }, [products, dealInsightsByPartNumber]);
 
   const activeFilterTags = useMemo(() => {
     const tags: { label: string; onRemove: () => void }[] = [];
+    selectedProductLines.forEach((productLine) => {
+      tags.push({
+        label: productLine,
+        onRemove: () => toggle(setSelectedProductLines)(productLine),
+      });
+    });
     selectedChips.forEach((chip) => {
       tags.push({
         label: chip,
@@ -227,18 +300,27 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       });
     });
     return tags;
-  }, [selectedChips, selectedMemories, selectedStorages, selectedScreenSizes]);
+  }, [
+    selectedProductLines,
+    selectedChips,
+    selectedMemories,
+    selectedStorages,
+    selectedScreenSizes,
+  ]);
 
   return (
     <>
-      {/* Hero Deal carousel - only shown when no filters are active */}
-      {!hasActiveFilters && globalBestDeal && globalTopDiscount && (
+      {!hasActiveFilters && heroPicks.length > 0 && (
         <div className="mb-6">
-          <HeroDeal bestDeal={globalBestDeal} topDiscount={globalTopDiscount} />
+          <HeroDeal picks={heroPicks} />
         </div>
       )}
 
       <FilterBar
+        productLines={productLines}
+        selectedProductLines={selectedProductLines}
+        onToggleProductLine={toggle(setSelectedProductLines)}
+        onClearProductLines={clear(setSelectedProductLines)}
         chips={chips}
         selectedChips={selectedChips}
         onToggleChip={toggle(setSelectedChips)}
@@ -268,7 +350,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       {filtered.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-base text-[var(--text-secondary)] mb-3">
-            Aucun MacBook Pro ne correspond a vos filtres
+            Aucun MacBook ne correspond a vos filtres
           </p>
           <button
             onClick={clearAll}
@@ -279,15 +361,27 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((product) => (
-            <ProductCard
-              key={product.partNumber}
-              product={product}
-              isBestDeal={product.partNumber === bestDealPartNumber}
-              isTopDiscount={product.partNumber === topDiscountPartNumber}
-              onShowHistory={setHistoryProduct}
-            />
-          ))}
+          {filtered.map((product) => {
+            const insights = dealInsightsByPartNumber.get(product.partNumber);
+            const topLabel =
+              topPartNumberByLine.get(product.productLine) === product.partNumber
+                ? product.productLine === "air"
+                  ? "Top Air"
+                  : "Top Pro"
+                : undefined;
+
+            return (
+              <ProductCard
+                key={product.partNumber}
+                product={product}
+                dealScore={insights?.totalScore}
+                topLabel={topLabel}
+                topReasons={topLabel ? insights?.reasons : undefined}
+                isTopDiscount={product.partNumber === topDiscountPartNumber}
+                onShowHistory={setHistoryProduct}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -300,7 +394,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
               <polyline points="12 6 12 12 16 14" />
             </svg>
             <h2 className="text-base font-semibold text-[var(--text-secondary)]">
-              Deals expires
+              Deals expirés
             </h2>
             <span className="text-xs text-[var(--text-tertiary)]">
               ({unavailableProducts.length})
