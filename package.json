@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:prod:status": "node scripts/prod-db-query.mjs",
+    "db:prod:query": "node scripts/prod-db-query.mjs"
   },
   "keywords": [],
   "author": "",
