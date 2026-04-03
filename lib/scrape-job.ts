@@ -3,6 +3,17 @@ import { products, priceHistory, scrapeRuns } from "./schema";
 import { scrapeAppleRefurb } from "./scraper";
 import { desc, eq } from "drizzle-orm";
 
+function isReappearingProduct(
+  lastSeen: string | null | undefined,
+  lastSuccessfulScrapedAt: string | null
+) {
+  if (!lastSeen || !lastSuccessfulScrapedAt) {
+    return false;
+  }
+
+  return lastSeen < lastSuccessfulScrapedAt;
+}
+
 export async function runScrapeJob() {
   const db = getDb();
   const now = new Date().toISOString();
@@ -13,18 +24,26 @@ export async function runScrapeJob() {
   const existing = await db.select().from(products);
   const existingMap = new Map(existing.map((p) => [p.partNumber, p]));
 
-  // Récupérer le dernier scrape run pour détecter les réapparitions
-  const lastRun = await db.select().from(scrapeRuns).orderBy(desc(scrapeRuns.scrapedAt)).limit(1);
-  const lastScrapedAt = lastRun[0]?.scrapedAt ?? null;
+  // On se base sur le dernier run reussi uniquement.
+  // Un run en erreur ou un run concurrent ne doit pas créer une "réapparition" artificielle.
+  const lastSuccessfulRun = await db
+    .select({ scrapedAt: scrapeRuns.scrapedAt })
+    .from(scrapeRuns)
+    .where(eq(scrapeRuns.status, "success"))
+    .orderBy(desc(scrapeRuns.scrapedAt))
+    .limit(1);
+  const lastSuccessfulScrapedAt = lastSuccessfulRun[0]?.scrapedAt ?? null;
 
   let newCount = 0;
 
   for (const p of scraped) {
     const exists = existingMap.get(p.partNumber);
+    const isReappearing = isReappearingProduct(
+      exists?.lastSeen,
+      lastSuccessfulScrapedAt
+    );
 
     if (exists) {
-      // Si le deal était expiré (lastSeen != dernier scrape), c'est une réapparition
-      const isReappearing = lastScrapedAt && exists.lastSeen !== lastScrapedAt;
       await db
         .update(products)
         .set({
@@ -71,8 +90,6 @@ export async function runScrapeJob() {
 
     // Consolidate price history: update lastSeenAt if price unchanged, otherwise insert new row
     // Si réapparition après expiration, toujours créer une nouvelle ligne (date de fin figée)
-    const isReappearing = lastScrapedAt && exists?.lastSeen !== lastScrapedAt;
-
     const lastEntry = await db
       .select()
       .from(priceHistory)
