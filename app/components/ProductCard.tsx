@@ -43,6 +43,13 @@ export function ProductCard({
   const savingsAmount = product.originalPrice - product.currentPrice;
   const colorKey = product.color.trim().toLowerCase();
   const colorInfo = colorKey ? COLOR_MAP[colorKey] ?? null : null;
+  const isTopAir = topLabel && product.productLine === "air";
+  const topCardClasses = isTopAir
+    ? "ring-2 ring-sky-500 border-sky-500/30"
+    : "ring-2 ring-amber-500 border-amber-500/30";
+  const topTagClasses = isTopAir
+    ? "bg-sky-500 shadow-sm shadow-sky-500/30"
+    : "bg-amber-500 shadow-sm shadow-amber-500/30";
 
   return (
     <div
@@ -51,7 +58,7 @@ export function ProductCard({
           ? "border-[var(--border)] opacity-70"
           : `hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
               topLabel
-                ? "ring-2 ring-amber-500 border-amber-500/30"
+                ? topCardClasses
                 : isTopDiscount
                   ? "ring-2 ring-[var(--accent-green)] border-[var(--accent-green)]/30"
                   : "border-[var(--border)] hover:border-[var(--border-hover)]"
@@ -82,7 +89,7 @@ export function ProductCard({
                 <Badge variant="new">Nouveau</Badge>
               )}
               {topLabel && (
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white shadow-sm shadow-amber-500/30">
+                <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white ${topTagClasses}`}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <path d="M22 4L12 14.01l-3-3" />

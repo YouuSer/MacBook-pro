@@ -10,11 +10,18 @@ import { ThemeToggle } from "./components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
 
+function formatParisDateTime(value: string) {
+  return new Date(value).toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris",
+  });
+}
+
 export default async function Home() {
   let availableProducts: Product[] = [];
   let unavailableProducts: Product[] = [];
   let lastScrapedAt: string | null = null;
   let loadError: ReturnType<typeof toApiError> | null = null;
+  const lastDeployedAt = process.env.NEXT_PUBLIC_DEPLOYED_AT ?? null;
 
   const dbConfig = inspectDbConfig();
   const dbTargetLabel =
@@ -129,9 +136,16 @@ export default async function Home() {
       </main>
 
       {/* Footer */}
-      {lastScrapedAt && (
-        <footer className="text-center py-6 text-[11px] text-[var(--text-tertiary)]">
-          Dernier scan : {new Date(lastScrapedAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}
+      {(lastScrapedAt || lastDeployedAt) && (
+        <footer className="py-6">
+          <div className="mx-auto flex max-w-7xl flex-col items-center gap-1 px-4 text-center text-[11px] text-[var(--text-tertiary)] sm:flex-row sm:justify-center sm:gap-4">
+            {lastScrapedAt && (
+              <span>Dernier scan : {formatParisDateTime(lastScrapedAt)}</span>
+            )}
+            {lastDeployedAt && (
+              <span>Dernier déploiement : {formatParisDateTime(lastDeployedAt)}</span>
+            )}
+          </div>
         </footer>
       )}
     </>
