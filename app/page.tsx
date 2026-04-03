@@ -1,6 +1,6 @@
 import { getDb, inspectDbConfig } from "@/lib/db";
 import { products, scrapeRuns } from "@/lib/schema";
-import { resolveProductLine } from "@/lib/product-catalog";
+import { parseCoreCounts, resolveProductLine } from "@/lib/product-catalog";
 import { desc } from "drizzle-orm";
 import type { Product } from "@/lib/types";
 import { toApiError } from "@/lib/api-error";
@@ -47,26 +47,32 @@ export default async function Home() {
       Date.now() - 24 * 60 * 60 * 1000
     ).toISOString();
 
-    const allProducts = rows.map((row) => ({
-      partNumber: row.partNumber,
-      title: row.title,
-      currentPrice: row.currentPrice,
-      originalPrice: row.originalPrice,
-      savingsPercent: row.savingsPercent,
-      savings: row.savings ?? "",
-      productLine: resolveProductLine(row.productLine, row.title) ?? "pro",
-      chip: row.chip ?? "Unknown",
-      screenSize: row.screenSize ?? "",
-      memory: row.memory ?? "",
-      storage: row.storage ?? "",
-      color: row.color ?? "",
-      releaseYear: row.releaseYear ?? "",
-      productUrl: row.productUrl ?? "",
-      imageUrl: row.imageUrl ?? "",
-      firstSeen: row.firstSeen,
-      lastSeen: row.lastSeen,
-      isNew: row.firstSeen >= twentyFourHoursAgo,
-    }));
+    const allProducts = rows.map((row) => {
+      const { cpuCores, gpuCores } = parseCoreCounts(row.title);
+
+      return {
+        partNumber: row.partNumber,
+        title: row.title,
+        currentPrice: row.currentPrice,
+        originalPrice: row.originalPrice,
+        savingsPercent: row.savingsPercent,
+        savings: row.savings ?? "",
+        productLine: resolveProductLine(row.productLine, row.title) ?? "pro",
+        chip: row.chip ?? "Unknown",
+        cpuCores,
+        gpuCores,
+        screenSize: row.screenSize ?? "",
+        memory: row.memory ?? "",
+        storage: row.storage ?? "",
+        color: row.color ?? "",
+        releaseYear: row.releaseYear ?? "",
+        productUrl: row.productUrl ?? "",
+        imageUrl: row.imageUrl ?? "",
+        firstSeen: row.firstSeen,
+        lastSeen: row.lastSeen,
+        isNew: row.firstSeen >= twentyFourHoursAgo,
+      };
+    });
 
     if (lastScrapedAt) {
       availableProducts = allProducts.filter((p) => p.lastSeen === lastScrapedAt);
@@ -113,7 +119,7 @@ export default async function Home() {
               </p>
               {dbConfig.kind === "invalid" && dbConfig.error && (
                 <p className="mt-1 text-xs text-[var(--text-tertiary)]">
-                  Detail config : {dbConfig.error}
+                  Détail config : {dbConfig.error}
                 </p>
               )}
             </div>

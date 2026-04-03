@@ -4,7 +4,7 @@ interface BadgeProps {
 }
 
 const styles: Record<BadgeProps["variant"], string> = {
-  new: "bg-[var(--accent-orange)]/15 text-[var(--accent-orange)] border-[var(--accent-orange)]/25",
+  new: "bg-[var(--accent-orange)]/10 text-[var(--accent-orange)] border-[var(--accent-orange)]/18",
   discount: "bg-emerald-500 text-white border-transparent dark:bg-emerald-400",
   chip: "bg-[var(--surface-secondary)] text-[var(--fg)] border-[var(--border)]",
   line: "bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20",

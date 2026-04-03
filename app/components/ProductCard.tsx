@@ -12,16 +12,17 @@ interface ProductCardProps {
   dealScore?: number;
   topLabel?: string;
   topReasons?: string[];
+  isTopDeal?: boolean;
   isTopDiscount?: boolean;
   isExpired?: boolean;
   onShowHistory?: (product: Product) => void;
 }
 
 const COLOR_MAP: Record<string, { hex: string; label: string; textDark?: boolean }> = {
-  spacegray: { hex: "#7d7e80", label: "Gris sideral", textDark: false },
-  spaceblack: { hex: "#393b3d", label: "Noir sideral", textDark: false },
+  spacegray: { hex: "#7d7e80", label: "Gris sidéral", textDark: false },
+  spaceblack: { hex: "#393b3d", label: "Noir sidéral", textDark: false },
   silver: { hex: "#c0c1c4", label: "Argent", textDark: true },
-  starlight: { hex: "#f3e7cf", label: "Lumiere stellaire", textDark: true },
+  starlight: { hex: "#f3e7cf", label: "Lumière stellaire", textDark: true },
   midnight: { hex: "#1f2937", label: "Minuit", textDark: false },
   midnightblue: { hex: "#1f2937", label: "Minuit", textDark: false },
   skyblue: { hex: "#c9e3f3", label: "Bleu ciel", textDark: true },
@@ -32,6 +33,7 @@ export function ProductCard({
   dealScore,
   topLabel,
   topReasons = [],
+  isTopDeal = false,
   isTopDiscount = false,
   isExpired = false,
   onShowHistory,
@@ -74,51 +76,51 @@ export function ProductCard({
           height={200}
           className={`h-20 sm:h-40 object-contain ${isExpired ? "grayscale opacity-60" : ""}`}
         />
-        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-row flex-wrap gap-1.5">
-          {isExpired ? (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-neutral-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M15 9l-6 6M9 9l6 6" />
-              </svg>
-              Indisponible
+        <div className="absolute left-2 right-2 top-2 sm:left-3 sm:right-3 sm:top-3 flex items-start justify-between gap-2">
+          <div className="flex flex-wrap gap-1.5 max-w-[calc(100%-64px)]">
+            {isExpired ? (
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-neutral-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M15 9l-6 6M9 9l6 6" />
+                </svg>
+                Indisponible
+              </div>
+            ) : (
+              <>
+                {product.isNew && (
+                  <Badge variant="new">Nouveau</Badge>
+                )}
+                {topLabel && (
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white ${topTagClasses}`}>
+                    {topLabel}
+                  </span>
+                )}
+                {isTopDeal && (
+                  <span className="inline-flex items-center rounded-full border border-zinc-900/10 bg-zinc-900/88 px-2 py-[5px] text-[11px] leading-none font-medium text-white shadow-sm shadow-zinc-900/12 dark:border-zinc-100/10 dark:bg-zinc-100/92 dark:text-[#1d1d1f] dark:shadow-zinc-100/10">
+                    Top Dev
+                  </span>
+                )}
+                {isTopDiscount && (
+                  <div className="inline-flex items-center rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white dark:bg-emerald-400">
+                    Top Remise
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {!isExpired && hasDiscount && (
+            <div className="shrink-0">
+              <Badge variant="discount">-{discountPercent}%</Badge>
             </div>
-          ) : (
-            <>
-              {product.isNew && (
-                <Badge variant="new">Nouveau</Badge>
-              )}
-              {isTopDiscount && (
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white dark:bg-emerald-400">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2l2.62 5.3 5.86.85-4.24 4.13 1 5.84L12 15.7l-5.24 2.42 1-5.84L3.52 8.15l5.86-.85L12 2z" />
-                  </svg>
-                  Top remise
-                </div>
-              )}
-            </>
           )}
         </div>
-        {!isExpired && hasDiscount && (
-          <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-            <Badge variant="discount">-{discountPercent}%</Badge>
-          </div>
-        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 p-3 sm:p-5 space-y-2.5 sm:space-y-3 min-w-0">
-        {/* Chip badge + color tag */}
+        {/* Specs badges */}
         <div className="flex items-center gap-2 flex-wrap">
-          {topLabel && (
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white ${topTagClasses}`}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <path d="M22 4L12 14.01l-3-3" />
-              </svg>
-              {topLabel}
-            </span>
-          )}
           <Badge variant="chip">{product.chip || "—"}</Badge>
           <Badge variant="line">{getProductLineLabel(product.productLine)}</Badge>
           {colorInfo && (
@@ -151,7 +153,7 @@ export function ProductCard({
             Économisez {savingsAmount.toLocaleString("fr-FR")} €
           </p>
           {typeof dealScore === "number" && (
-            <span className="text-[11px] font-semibold text-[var(--text-tertiary)]" title="Score developpeur : adequation dev plus opportunite de prix">
+            <span className="text-[11px] font-semibold text-[var(--text-tertiary)]" title="Score développeur : adéquation dev plus opportunité de prix">
               Score {dealScore.toFixed(0)}
             </span>
           )}
@@ -205,6 +207,15 @@ export function ProductCard({
               <span className="text-xs font-semibold">{product.memory.toUpperCase()}</span>
             </div>
           )}
+          {product.cpuCores && (
+            <div className="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
+                <rect x="7" y="7" width="10" height="10" rx="1.5" />
+                <path d="M9 2v3M15 2v3M9 19v3M15 19v3M19 9h3M19 15h3M2 9h3M2 15h3" />
+              </svg>
+              <span className="text-xs font-semibold">CPU {product.cpuCores} cœurs</span>
+            </div>
+          )}
           {product.storage && (
             <div className="flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
@@ -212,6 +223,16 @@ export function ProductCard({
                 <path d="M3 9h18M9 3v18" />
               </svg>
               <span className="text-xs font-semibold">{product.storage.toUpperCase()}</span>
+            </div>
+          )}
+          {product.gpuCores && (
+            <div className="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
+                <rect x="4" y="6" width="16" height="10" rx="2" />
+                <path d="M8 18h8M12 16v2" />
+                <path d="M8 10h.01M12 10h.01M16 10h.01" />
+              </svg>
+              <span className="text-xs font-semibold">GPU {product.gpuCores} cœurs</span>
             </div>
           )}
           {screenLabel && (

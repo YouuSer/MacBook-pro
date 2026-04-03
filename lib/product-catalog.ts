@@ -3,6 +3,9 @@ export type ProductLine = "air" | "pro";
 const CHIP_REGEX = /\b(M[1-5])(?:\s+(Pro|Max|Ultra))?\b/i;
 const STANDARD_CHIP_REGEX = /^M[1-5]$/;
 const PRO_CHIP_REGEX = /^M[1-5] Pro$/;
+const CORE_WORD_REGEX = "c(?:oe|œ)urs?";
+const CPU_CORES_REGEX = new RegExp(`\\bCPU\\s+(\\d+)\\s+${CORE_WORD_REGEX}\\b`, "i");
+const GPU_CORES_REGEX = new RegExp(`\\bGPU\\s+(\\d+)\\s+${CORE_WORD_REGEX}\\b`, "i");
 
 const SCREEN_SIZE_LABELS: Record<string, string> = {
   "13": '13"',
@@ -31,6 +34,20 @@ export function parseChip(value: string): string | null {
   }
 
   return `${chip} ${tier[0].toUpperCase()}${tier.slice(1).toLowerCase()}`;
+}
+
+export function parseCoreCounts(value: string): {
+  cpuCores: string;
+  gpuCores: string;
+} {
+  const normalized = normalizeAppleText(value);
+  const cpuMatch = normalized.match(CPU_CORES_REGEX);
+  const gpuMatch = normalized.match(GPU_CORES_REGEX);
+
+  return {
+    cpuCores: cpuMatch?.[1] ?? "",
+    gpuCores: gpuMatch?.[1] ?? "",
+  };
 }
 
 export function normalizeProductLine(

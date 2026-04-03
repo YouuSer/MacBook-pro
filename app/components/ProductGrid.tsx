@@ -19,8 +19,8 @@ interface ProductGridProps {
   unavailableProducts?: Product[];
 }
 
-function getTopLabel(productLine: Product["productLine"]) {
-  return productLine === "air" ? "Top dev Air" : "Top dev Pro";
+function getTopLineLabel(productLine: Product["productLine"]) {
+  return productLine === "air" ? "Top Air" : "Top Pro";
 }
 
 function normalizeSpecValue(value: string): string {
@@ -220,6 +220,17 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     ).partNumber;
   }, [filtered]);
 
+  const topDealPartNumber = useMemo(() => {
+    if (filtered.length === 0) return null;
+
+    return filtered.reduce((best, product) =>
+      (dealInsightsByPartNumber.get(product.partNumber)?.totalScore ?? 0) >
+      (dealInsightsByPartNumber.get(best.partNumber)?.totalScore ?? 0)
+        ? product
+        : best
+    ).partNumber;
+  }, [filtered, dealInsightsByPartNumber]);
+
   const topPartNumberByLine = useMemo(() => {
     const byLine = new Map<"air" | "pro", string>();
 
@@ -265,7 +276,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
               product: topProduct,
               score: insights.totalScore,
               reasons: insights.reasons,
-              label: getTopLabel(productLine),
+              label: getTopLineLabel(productLine),
             }]
           : [];
       });
@@ -354,13 +365,13 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       {filtered.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-base text-[var(--text-secondary)] mb-3">
-            Aucun MacBook ne correspond a vos filtres
+            Aucun MacBook ne correspond à vos filtres
           </p>
           <button
             onClick={clearAll}
             className="text-sm text-[var(--accent-blue)] hover:underline"
           >
-            Reinitialiser les filtres
+            Réinitialiser les filtres
           </button>
         </div>
       ) : (
@@ -369,8 +380,10 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
             const insights = dealInsightsByPartNumber.get(product.partNumber);
             const topLabel =
               topPartNumberByLine.get(product.productLine) === product.partNumber
-                ? getTopLabel(product.productLine)
+                ? getTopLineLabel(product.productLine)
                 : undefined;
+            const isTopDeal = product.partNumber === topDealPartNumber;
+            const topReasons = topLabel || isTopDeal ? insights?.reasons : undefined;
 
             return (
               <ProductCard
@@ -378,7 +391,8 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
                 product={product}
                 dealScore={insights?.totalScore}
                 topLabel={topLabel}
-                topReasons={topLabel ? insights?.reasons : undefined}
+                topReasons={topReasons}
+                isTopDeal={isTopDeal}
                 isTopDiscount={product.partNumber === topDiscountPartNumber}
                 onShowHistory={setHistoryProduct}
               />

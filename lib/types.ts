@@ -70,6 +70,8 @@ export interface Product {
   savings: string;
   productLine: ProductLine;
   chip: string;
+  cpuCores: string;
+  gpuCores: string;
   screenSize: string;
   memory: string;
   storage: string;

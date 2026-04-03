@@ -19,7 +19,6 @@ interface SlideConfig {
   pick: HeroPick;
   label: string;
   color: string;
-  icon: React.ReactNode;
 }
 
 interface HeroDealProps {
@@ -89,7 +88,7 @@ function HeroSlide({ pick }: { pick: HeroPick }) {
             <span className="text-[var(--border)]" aria-hidden>·</span>
             <span
               className="text-xs font-medium text-[var(--text-secondary)]"
-              title="Score developpeur : adequation dev plus opportunite de prix"
+              title="Score développeur : adéquation dev plus opportunité de prix"
             >
               Score {score.toFixed(0)}
             </span>
@@ -142,18 +141,6 @@ export function HeroDeal({ picks }: HeroDealProps) {
       pick.product.productLine === "air"
         ? "bg-sky-500"
         : "bg-amber-500",
-    icon:
-      pick.product.productLine === "air" ? (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-          <path d="M20 16.5A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5Z" />
-          <path d="M8 19h8" />
-        </svg>
-      ) : (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-          <path d="M22 4L12 14.01l-3-3" />
-        </svg>
-      ),
   }));
 
   if (slides.length === 0) {
@@ -181,7 +168,6 @@ export function HeroDeal({ picks }: HeroDealProps) {
       {/* Header */}
       <div className={`${slide.color} px-4 py-2 flex items-center justify-between transition-colors`}>
         <div className="flex items-center gap-2">
-          {slide.icon}
           <span className="text-[11px] font-semibold text-white uppercase tracking-wider">
             {slide.label}
           </span>
@@ -190,7 +176,7 @@ export function HeroDeal({ picks }: HeroDealProps) {
           <button
             onClick={prev}
             className="p-1 rounded-full hover:bg-white/20 transition-colors text-white"
-            aria-label="Precedent"
+            aria-label="Précédent"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />

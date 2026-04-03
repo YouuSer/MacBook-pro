@@ -95,7 +95,7 @@ export function PriceHistoryChart({
           }}
           className="text-xs text-[var(--accent-blue)] hover:underline"
         >
-          Reessayer
+          Réessayer
         </button>
       </div>
     );
@@ -105,7 +105,7 @@ export function PriceHistoryChart({
     return (
       <div className="text-center py-12">
         <p className="text-sm text-[var(--text-secondary)]">
-          Pas assez de donnees pour afficher un historique
+          Pas assez de données pour afficher un historique
         </p>
       </div>
     );
@@ -124,7 +124,7 @@ export function PriceHistoryChart({
   return (
     <div>
       <div className="text-xs text-[var(--text-secondary)] mb-4">
-        Evolution du prix
+        Évolution du prix
       </div>
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={chartData}>
@@ -175,10 +175,10 @@ export function PriceHistoryChart({
         </AreaChart>
       </ResponsiveContainer>
 
-      {/* Tableau detail prix par periode */}
+      {/* Tableau détail prix par période */}
       <div className="mt-6">
         <div className="text-xs text-[var(--text-secondary)] mb-3">
-          Detail par periode
+          Détail par période
         </div>
         <div className="rounded-xl border border-[var(--border)] overflow-hidden">
           <table className="w-full text-sm">

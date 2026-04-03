@@ -93,7 +93,7 @@ export function FilterBar({
           onClear={onClearStorages}
         />
         <FilterDropdown
-          label="Ecran"
+          label="Écran"
           options={screenSizes}
           selected={selectedScreenSizes}
           onToggle={onToggleScreenSize}
@@ -106,11 +106,11 @@ export function FilterBar({
             onChange={(e) => onSort(e.target.value as SortOption)}
             className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--fg)] transition-colors focus:outline-none focus:border-[var(--accent-blue)] hover:border-[var(--border-hover)]"
           >
-            <option value="best-deal">Top dev</option>
-            <option value="discount">Top remise</option>
+            <option value="best-deal">Top Dev</option>
+            <option value="discount">Top Remise</option>
             <option value="price-asc">Prix croissant</option>
-            <option value="price-desc">Prix decroissant</option>
-            <option value="newest">Plus recents</option>
+            <option value="price-desc">Prix décroissant</option>
+            <option value="newest">Plus récents</option>
           </select>
         </div>
       </div>

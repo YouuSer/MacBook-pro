@@ -63,10 +63,10 @@ export function ScrapeButton() {
   const label = isPending
     ? "Scan en cours"
     : state === "success"
-      ? "Dernier scan reussi"
+      ? "Dernier scan réussi"
       : state === "error"
-        ? "Le scan a echoue"
-        : "Declencher un scrape";
+        ? "Le scan a échoué"
+        : "Déclencher un scrape";
 
   return (
     <button

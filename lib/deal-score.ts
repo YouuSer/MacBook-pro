@@ -139,7 +139,7 @@ function getReasons(
   if (/\bPro$/i.test(product.chip)) {
     pushReason(reasons, "puce Pro");
   } else if (/^M[45]$/i.test(product.chip)) {
-    pushReason(reasons, `puce ${product.chip} recente`);
+    pushReason(reasons, `puce ${product.chip} récente`);
   }
 
   if (storageGB >= 1024) {
@@ -155,13 +155,13 @@ function getReasons(
   }
 
   if (profile.externalDisplaysScore >= 100) {
-    pushReason(reasons, "multi-ecrans solide");
+    pushReason(reasons, "multi-écrans solide");
   } else if (profile.portsScore >= 100) {
     pushReason(reasons, "ports complets");
   }
 
   if (reasons.length === 0) {
-    pushReason(reasons, "bon equilibre pour dev");
+    pushReason(reasons, "bon équilibre pour dev");
   }
 
   return reasons;
