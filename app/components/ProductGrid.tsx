@@ -19,6 +19,10 @@ interface ProductGridProps {
   unavailableProducts?: Product[];
 }
 
+function getTopLabel(productLine: Product["productLine"]) {
+  return productLine === "air" ? "Top dev Air" : "Top dev Pro";
+}
+
 function normalizeSpecValue(value: string): string {
   return value.trim().toUpperCase();
 }
@@ -261,7 +265,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
               product: topProduct,
               score: insights.totalScore,
               reasons: insights.reasons,
-              label: productLine === "air" ? "Top Air" : "Top Pro",
+              label: getTopLabel(productLine),
             }]
           : [];
       });
@@ -365,9 +369,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
             const insights = dealInsightsByPartNumber.get(product.partNumber);
             const topLabel =
               topPartNumberByLine.get(product.productLine) === product.partNumber
-                ? product.productLine === "air"
-                  ? "Top Air"
-                  : "Top Pro"
+                ? getTopLabel(product.productLine)
                 : undefined;
 
             return (

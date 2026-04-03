@@ -88,15 +88,6 @@ export function ProductCard({
               {product.isNew && (
                 <Badge variant="new">Nouveau</Badge>
               )}
-              {topLabel && (
-                <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white ${topTagClasses}`}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <path d="M22 4L12 14.01l-3-3" />
-                  </svg>
-                  {topLabel}
-                </div>
-              )}
               {isTopDiscount && (
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white dark:bg-emerald-400">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -119,6 +110,15 @@ export function ProductCard({
       <div className="flex-1 p-3 sm:p-5 space-y-2.5 sm:space-y-3 min-w-0">
         {/* Chip badge + color tag */}
         <div className="flex items-center gap-2 flex-wrap">
+          {topLabel && (
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white ${topTagClasses}`}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <path d="M22 4L12 14.01l-3-3" />
+              </svg>
+              {topLabel}
+            </span>
+          )}
           <Badge variant="chip">{product.chip || "—"}</Badge>
           <Badge variant="line">{getProductLineLabel(product.productLine)}</Badge>
           {colorInfo && (
