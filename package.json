@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:prod:status": "node scripts/prod-db-query.mjs",
-    "db:prod:query": "node scripts/prod-db-query.mjs"
+    "db:prod:query": "node scripts/prod-db-query.mjs",
+    "db:history:consolidate": "node scripts/consolidate-price-history.mjs"
   },
   "keywords": [],
   "author": "",
