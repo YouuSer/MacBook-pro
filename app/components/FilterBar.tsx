@@ -2,7 +2,13 @@
 
 import { FilterDropdown } from "./FilterDropdown";
 
-export type SortOption = "best-deal" | "discount" | "price-asc" | "price-desc" | "newest";
+export type SortOption =
+  | "best-deal"
+  | "discount"
+  | "price-asc"
+  | "price-desc"
+  | "ram-desc"
+  | "newest";
 
 interface FilterBarProps {
   productLines: string[];
@@ -25,6 +31,10 @@ interface FilterBarProps {
   selectedScreenSizes: Set<string>;
   onToggleScreenSize: (size: string) => void;
   onClearScreenSizes: () => void;
+  priceMovements: string[];
+  selectedPriceMovements: Set<string>;
+  onTogglePriceMovement: (value: string) => void;
+  onClearPriceMovements: () => void;
   sort: SortOption;
   onSort: (sort: SortOption) => void;
   onClearAll: () => void;
@@ -54,6 +64,10 @@ export function FilterBar({
   selectedScreenSizes,
   onToggleScreenSize,
   onClearScreenSizes,
+  priceMovements,
+  selectedPriceMovements,
+  onTogglePriceMovement,
+  onClearPriceMovements,
   sort,
   onSort,
   onClearAll,
@@ -99,6 +113,13 @@ export function FilterBar({
           onToggle={onToggleScreenSize}
           onClear={onClearScreenSizes}
         />
+        <FilterDropdown
+          label="Évolution"
+          options={priceMovements}
+          selected={selectedPriceMovements}
+          onToggle={onTogglePriceMovement}
+          onClear={onClearPriceMovements}
+        />
 
         <div className="ml-auto flex items-center gap-3">
           <select
@@ -110,6 +131,7 @@ export function FilterBar({
             <option value="discount">Top Remise</option>
             <option value="price-asc">Prix croissant</option>
             <option value="price-desc">Prix décroissant</option>
+            <option value="ram-desc">RAM décroissante</option>
             <option value="newest">Plus récents</option>
           </select>
         </div>

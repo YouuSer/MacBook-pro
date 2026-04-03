@@ -52,6 +52,12 @@ export function ProductCard({
   const topTagClasses = isTopAir
     ? "bg-sky-500 shadow-sm shadow-sky-500/30"
     : "bg-amber-500 shadow-sm shadow-amber-500/30";
+  const priceTrendTitle =
+    product.priceTrend === "down" && product.previousPrice !== null
+      ? `Prix en baisse depuis ${product.previousPrice.toLocaleString("fr-FR")} €`
+      : product.priceTrend === "up" && product.previousPrice !== null
+        ? `Prix en hausse depuis ${product.previousPrice.toLocaleString("fr-FR")} €`
+        : null;
 
   return (
     <div
@@ -137,9 +143,34 @@ export function ProductCard({
 
         {/* Price */}
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-xl font-bold text-[var(--fg)]">
-            {product.currentPrice.toLocaleString("fr-FR")} €
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold text-[var(--fg)]">
+              {product.currentPrice.toLocaleString("fr-FR")} €
+            </span>
+            {priceTrendTitle && (
+              <span
+                className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${
+                  product.priceTrend === "down"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                }`}
+                title={priceTrendTitle}
+                aria-label={priceTrendTitle}
+              >
+                {product.priceTrend === "down" ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 7h10v10" />
+                    <path d="M17 7 7 17" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 17h10V7" />
+                    <path d="m7 17 10-10" />
+                  </svg>
+                )}
+              </span>
+            )}
+          </div>
           {hasDiscount && (
             <span className="text-sm text-[var(--text-secondary)] line-through">
               {product.originalPrice.toLocaleString("fr-FR")} €

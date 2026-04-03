@@ -19,6 +19,20 @@ interface ProductGridProps {
   unavailableProducts?: Product[];
 }
 
+const PRICE_MOVEMENT_OPTIONS = ["En baisse", "En hausse"];
+
+function getPriceMovementLabel(priceTrend: Product["priceTrend"]) {
+  if (priceTrend === "down") {
+    return "En baisse";
+  }
+
+  if (priceTrend === "up") {
+    return "En hausse";
+  }
+
+  return null;
+}
+
 function getTopLineLabel(productLine: Product["productLine"]) {
   return productLine === "air" ? "Top Air" : "Top Pro";
 }
@@ -62,6 +76,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
   const [selectedMemories, setSelectedMemories] = useState<Set<string>>(new Set());
   const [selectedStorages, setSelectedStorages] = useState<Set<string>>(new Set());
   const [selectedScreenSizes, setSelectedScreenSizes] = useState<Set<string>>(new Set());
+  const [selectedPriceMovements, setSelectedPriceMovements] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<SortOption>("best-deal");
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
 
@@ -120,6 +135,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     setSelectedMemories(new Set());
     setSelectedStorages(new Set());
     setSelectedScreenSizes(new Set());
+    setSelectedPriceMovements(new Set());
   };
 
   const hasActiveFilters =
@@ -127,7 +143,8 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     selectedChips.size > 0 ||
     selectedMemories.size > 0 ||
     selectedStorages.size > 0 ||
-    selectedScreenSizes.size > 0;
+    selectedScreenSizes.size > 0 ||
+    selectedPriceMovements.size > 0;
 
   const dealInsightsByPartNumber = useMemo(() => {
     const grouped = {
@@ -143,39 +160,55 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     );
   }, [products]);
 
-  const filtered = useMemo(() => {
-    let result = products;
-
-    if (selectedProductLines.size > 0) {
-      result = result.filter((p) =>
-        selectedProductLines.has(getProductLineLabel(p.productLine))
-      );
+  const matchesFilters = (product: Product) => {
+    if (
+      selectedProductLines.size > 0 &&
+      !selectedProductLines.has(getProductLineLabel(product.productLine))
+    ) {
+      return false;
     }
 
-    if (selectedChips.size > 0) {
-      result = result.filter((p) => selectedChips.has(p.chip));
+    if (selectedChips.size > 0 && !selectedChips.has(product.chip)) {
+      return false;
     }
 
-    if (selectedMemories.size > 0) {
-      result = result.filter((p) =>
-        selectedMemories.has(normalizeSpecValue(p.memory))
-      );
+    if (
+      selectedMemories.size > 0 &&
+      !selectedMemories.has(normalizeSpecValue(product.memory))
+    ) {
+      return false;
     }
 
-    if (selectedStorages.size > 0) {
-      result = result.filter((p) =>
-        selectedStorages.has(normalizeSpecValue(p.storage))
-      );
+    if (
+      selectedStorages.size > 0 &&
+      !selectedStorages.has(normalizeSpecValue(product.storage))
+    ) {
+      return false;
     }
 
     if (selectedScreenSizes.size > 0) {
       const rawSizes = new Set(
-        Array.from(selectedScreenSizes).map((s) => s.replace(/"/g, ""))
+        Array.from(selectedScreenSizes).map((size) => size.replace(/"/g, ""))
       );
-      result = result.filter((p) =>
-        rawSizes.has(normalizeScreenSize(p.screenSize))
-      );
+
+      if (!rawSizes.has(normalizeScreenSize(product.screenSize))) {
+        return false;
+      }
     }
+
+    if (selectedPriceMovements.size > 0) {
+      const movementLabel = getPriceMovementLabel(product.priceTrend);
+
+      if (!movementLabel || !selectedPriceMovements.has(movementLabel)) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const filtered = useMemo(() => {
+    let result = products.filter(matchesFilters);
 
     switch (sort) {
       case "best-deal":
@@ -194,6 +227,13 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       case "price-desc":
         result = [...result].sort((a, b) => b.currentPrice - a.currentPrice);
         break;
+      case "ram-desc":
+        result = [...result].sort(
+          (a, b) =>
+            toCapacityValue(normalizeSpecValue(b.memory)) -
+            toCapacityValue(normalizeSpecValue(a.memory))
+        );
+        break;
       case "newest":
         result = [...result].sort(
           (a, b) => new Date(b.firstSeen).getTime() - new Date(a.firstSeen).getTime()
@@ -209,9 +249,23 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     selectedMemories,
     selectedStorages,
     selectedScreenSizes,
+    selectedPriceMovements,
     sort,
     dealInsightsByPartNumber,
   ]);
+
+  const filteredUnavailableProducts = useMemo(
+    () => unavailableProducts.filter(matchesFilters),
+    [
+      unavailableProducts,
+      selectedProductLines,
+      selectedChips,
+      selectedMemories,
+      selectedStorages,
+      selectedScreenSizes,
+      selectedPriceMovements,
+    ]
+  );
 
   const topDiscountPartNumber = useMemo(() => {
     if (filtered.length === 0) return null;
@@ -314,6 +368,12 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
         onRemove: () => toggle(setSelectedScreenSizes)(size),
       });
     });
+    selectedPriceMovements.forEach((movement) => {
+      tags.push({
+        label: movement,
+        onRemove: () => toggle(setSelectedPriceMovements)(movement),
+      });
+    });
     return tags;
   }, [
     selectedProductLines,
@@ -321,7 +381,10 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     selectedMemories,
     selectedStorages,
     selectedScreenSizes,
+    selectedPriceMovements,
   ]);
+
+  const visibleCount = filtered.length + filteredUnavailableProducts.length;
 
   return (
     <>
@@ -352,17 +415,21 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
         selectedScreenSizes={selectedScreenSizes}
         onToggleScreenSize={toggle(setSelectedScreenSizes)}
         onClearScreenSizes={clear(setSelectedScreenSizes)}
+        priceMovements={PRICE_MOVEMENT_OPTIONS}
+        selectedPriceMovements={selectedPriceMovements}
+        onTogglePriceMovement={toggle(setSelectedPriceMovements)}
+        onClearPriceMovements={clear(setSelectedPriceMovements)}
         sort={sort}
         onSort={setSort}
         onClearAll={clearAll}
-        resultCount={filtered.length}
+        resultCount={visibleCount}
         hasActiveFilters={hasActiveFilters}
         activeFilterTags={activeFilterTags}
       />
 
       <StatsStrip products={products} />
 
-      {filtered.length === 0 ? (
+      {visibleCount === 0 ? (
         <div className="text-center py-20">
           <p className="text-base text-[var(--text-secondary)] mb-3">
             Aucun MacBook ne correspond à vos filtres
@@ -402,7 +469,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       )}
 
       {/* Expired products section */}
-      {unavailableProducts.length > 0 && (
+      {filteredUnavailableProducts.length > 0 && (
         <div className="mt-12">
           <div className="flex items-center gap-2.5 mb-5">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-tertiary)]">
@@ -413,11 +480,11 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
               Deals expirés
             </h2>
             <span className="text-xs text-[var(--text-tertiary)]">
-              ({unavailableProducts.length})
+              ({filteredUnavailableProducts.length})
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {unavailableProducts.map((product) => (
+            {filteredUnavailableProducts.map((product) => (
               <ProductCard
                 key={product.partNumber}
                 product={product}

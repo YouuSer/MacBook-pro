@@ -1,5 +1,5 @@
 import { getDb, inspectDbConfig } from "@/lib/db";
-import { products, scrapeRuns } from "@/lib/schema";
+import { priceHistory, products, scrapeRuns } from "@/lib/schema";
 import { parseCoreCounts, resolveProductLine } from "@/lib/product-catalog";
 import { desc } from "drizzle-orm";
 import type { Product } from "@/lib/types";
@@ -9,11 +9,60 @@ import { ScrapeButton } from "./components/ScrapeButton";
 import { ThemeToggle } from "./components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
+const PRICE_EPSILON = 0.001;
 
 function formatParisDateTime(value: string) {
   return new Date(value).toLocaleString("fr-FR", {
     timeZone: "Europe/Paris",
   });
+}
+
+function isSamePrice(a: number, b: number) {
+  return Math.abs(a - b) < PRICE_EPSILON;
+}
+
+function buildDistinctPriceHistory(
+  rows: Array<{ partNumber: string; price: number }>
+) {
+  const historyByPartNumber = new Map<string, number[]>();
+
+  for (const row of rows) {
+    const history = historyByPartNumber.get(row.partNumber);
+
+    if (!history) {
+      historyByPartNumber.set(row.partNumber, [row.price]);
+      continue;
+    }
+
+    if (!isSamePrice(history[history.length - 1], row.price)) {
+      history.push(row.price);
+    }
+  }
+
+  return historyByPartNumber;
+}
+
+function getPreviousDistinctPrice(currentPrice: number, history: number[]) {
+  return history.find((price) => !isSamePrice(price, currentPrice)) ?? null;
+}
+
+function getPriceTrend(
+  currentPrice: number,
+  previousPrice: number | null
+): Product["priceTrend"] {
+  if (previousPrice === null) {
+    return null;
+  }
+
+  if (currentPrice < previousPrice) {
+    return "down";
+  }
+
+  if (currentPrice > previousPrice) {
+    return "up";
+  }
+
+  return null;
 }
 
 export default async function Home() {
@@ -34,6 +83,13 @@ export default async function Home() {
   try {
     const db = getDb();
     const rows = await db.select().from(products).orderBy(desc(products.lastSeen));
+    const historyRows = await db
+      .select({
+        partNumber: priceHistory.partNumber,
+        price: priceHistory.price,
+      })
+      .from(priceHistory)
+      .orderBy(desc(priceHistory.firstSeenAt));
 
     const lastRun = await db
       .select()
@@ -46,14 +102,23 @@ export default async function Home() {
     const twentyFourHoursAgo = new Date(
       Date.now() - 24 * 60 * 60 * 1000
     ).toISOString();
+    const distinctPriceHistory = buildDistinctPriceHistory(historyRows);
 
     const allProducts = rows.map((row) => {
       const { cpuCores, gpuCores } = parseCoreCounts(row.title);
+      const priceHistoryForProduct =
+        distinctPriceHistory.get(row.partNumber) ?? [];
+      const previousPrice = getPreviousDistinctPrice(
+        row.currentPrice,
+        priceHistoryForProduct
+      );
 
       return {
         partNumber: row.partNumber,
         title: row.title,
         currentPrice: row.currentPrice,
+        previousPrice,
+        priceTrend: getPriceTrend(row.currentPrice, previousPrice),
         originalPrice: row.originalPrice,
         savingsPercent: row.savingsPercent,
         savings: row.savings ?? "",

@@ -1,5 +1,7 @@
 import type { ProductLine } from "./product-catalog";
 
+export type PriceTrend = "up" | "down";
+
 // Types pour les données brutes Apple Refurb
 
 export interface AppleRefurbBootstrap {
@@ -65,6 +67,8 @@ export interface Product {
   partNumber: string;
   title: string;
   currentPrice: number;
+  previousPrice: number | null;
+  priceTrend: PriceTrend | null;
   originalPrice: number;
   savingsPercent: number;
   savings: string;
