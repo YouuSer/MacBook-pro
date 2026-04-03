@@ -30,6 +30,12 @@ function HeroSlide({ pick }: { pick: HeroPick }) {
   const discountPercent = Math.round(product.savingsPercent);
   const savingsAmount = product.originalPrice - product.currentPrice;
   const screenLabel = formatScreenSize(product.screenSize);
+  const specItems = [
+    screenLabel,
+    product.memory ? product.memory.toUpperCase() : null,
+    product.storage ? product.storage.toUpperCase() : null,
+    product.releaseYear || null,
+  ].filter((item): item is string => Boolean(item));
 
   return (
     <div className="flex flex-col sm:flex-row gap-6 p-5">
@@ -46,9 +52,6 @@ function HeroSlide({ pick }: { pick: HeroPick }) {
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="chip">{product.chip}</Badge>
           <Badge variant="line">{getProductLineLabel(product.productLine)}</Badge>
-          {screenLabel && (
-            <span className="text-xs text-[var(--text-secondary)]">{screenLabel}</span>
-          )}
           {product.isNew && <Badge variant="new">Nouveau</Badge>}
         </div>
 
@@ -63,36 +66,27 @@ function HeroSlide({ pick }: { pick: HeroPick }) {
         )}
 
         <div className="flex items-center gap-3 flex-wrap">
-          {product.memory && (
-            <span className="text-xs font-medium text-[var(--text-secondary)]">
-              {product.memory.toUpperCase()}
-            </span>
-          )}
-          {product.storage && (
+          {specItems.map((item, index) => (
+            <div key={item} className="flex items-center gap-3">
+              {index > 0 && (
+                <span className="text-[var(--border)]" aria-hidden>·</span>
+              )}
+              <span className="text-xs font-medium text-[var(--text-secondary)]">
+                {item}
+              </span>
+            </div>
+          ))}
+          {specItems.length > 0 && (
             <>
               <span className="text-[var(--border)]" aria-hidden>·</span>
-              <span className="text-xs font-medium text-[var(--text-secondary)]">
-                {product.storage.toUpperCase()}
-              </span>
             </>
           )}
-          {product.releaseYear && (
-            <>
-              <span className="text-[var(--border)]" aria-hidden>·</span>
-              <span className="text-xs font-medium text-[var(--text-secondary)]">
-                {product.releaseYear}
-              </span>
-            </>
-          )}
-          <>
-            <span className="text-[var(--border)]" aria-hidden>·</span>
-            <span
-              className="text-xs font-medium text-[var(--text-secondary)]"
-              title="Score développeur : adéquation dev plus opportunité de prix"
-            >
-              Score {score.toFixed(0)}
-            </span>
-          </>
+          <span
+            className="text-xs font-medium text-[var(--text-secondary)]"
+            title="Score développeur : adéquation dev plus opportunité de prix"
+          >
+            Score {score.toFixed(0)}
+          </span>
         </div>
 
         <div className="flex items-baseline gap-3">
