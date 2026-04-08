@@ -52,6 +52,17 @@ export function ProductCard({
   const topTagClasses = isTopAir
     ? "bg-sky-500 shadow-sm shadow-sky-500/30"
     : "bg-amber-500 shadow-sm shadow-amber-500/30";
+  const seenAtDate = new Date(product.firstSeen).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Paris",
+  });
+  const seenAtTime = new Date(product.firstSeen).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Paris",
+  });
   const priceTrendTitle =
     product.priceTrend === "down" && product.previousPrice !== null
       ? `Prix en baisse depuis ${product.previousPrice.toLocaleString("fr-FR")} €`
@@ -191,40 +202,22 @@ export function ProductCard({
         </div>
 
         {topReasons.length > 0 && (
-          <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2">
-            {topReasons.join(" · ")}{" "}
-            <span className="text-[var(--text-tertiary)]">
-              · Vu le{" "}
-              {new Date(product.firstSeen).toLocaleDateString("fr-FR", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                timeZone: "Europe/Paris",
-              })}{" "}
-              {new Date(product.firstSeen).toLocaleTimeString("fr-FR", {
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "Europe/Paris",
-              })}
+          <div className="flex items-start gap-3 text-[11px]">
+            <p className="min-w-0 flex-1 line-clamp-2 text-[var(--text-secondary)]">
+              {topReasons.join(" · ")}
+            </p>
+            <span className="ml-auto shrink-0 whitespace-nowrap text-[var(--text-tertiary)]">
+              Vu le {seenAtDate} {seenAtTime}
             </span>
-          </p>
+          </div>
         )}
 
         {!topReasons.length && (
-          <p className="text-[11px] text-[var(--text-tertiary)]">
-            Vu le{" "}
-            {new Date(product.firstSeen).toLocaleDateString("fr-FR", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-              timeZone: "Europe/Paris",
-            })}{" "}
-            {new Date(product.firstSeen).toLocaleTimeString("fr-FR", {
-              hour: "2-digit",
-              minute: "2-digit",
-              timeZone: "Europe/Paris",
-            })}
-          </p>
+          <div className="flex text-[11px] text-[var(--text-tertiary)]">
+            <span className="ml-auto">
+              Vu le {seenAtDate} {seenAtTime}
+            </span>
+          </div>
         )}
 
         {/* Specs grid */}

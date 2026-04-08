@@ -70,6 +70,11 @@ function sortSpecValues(values: string[]): string[] {
   });
 }
 
+function getSortableSpecValue(value: string): number {
+  const parsed = toCapacityValue(normalizeSpecValue(value));
+  return Number.isFinite(parsed) ? parsed : -1;
+}
+
 export function ProductGrid({ products, unavailableProducts = [] }: ProductGridProps) {
   const [selectedProductLines, setSelectedProductLines] = useState<Set<string>>(new Set());
   const [selectedChips, setSelectedChips] = useState<Set<string>>(new Set());
@@ -230,8 +235,13 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       case "ram-desc":
         result = [...result].sort(
           (a, b) =>
-            toCapacityValue(normalizeSpecValue(b.memory)) -
-            toCapacityValue(normalizeSpecValue(a.memory))
+            getSortableSpecValue(b.memory) - getSortableSpecValue(a.memory)
+        );
+        break;
+      case "storage-desc":
+        result = [...result].sort(
+          (a, b) =>
+            getSortableSpecValue(b.storage) - getSortableSpecValue(a.storage)
         );
         break;
       case "newest":
