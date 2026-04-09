@@ -212,46 +212,50 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
     return true;
   };
 
-  const filtered = useMemo(() => {
-    let result = products.filter(matchesFilters);
+  const sortProducts = (productList: Product[]) => {
+    const result = [...productList];
 
     switch (sort) {
       case "best-deal":
-        result = [...result].sort(
+        return result.sort(
           (a, b) =>
             (dealInsightsByPartNumber.get(b.partNumber)?.totalScore ?? 0) -
             (dealInsightsByPartNumber.get(a.partNumber)?.totalScore ?? 0)
         );
-        break;
       case "discount":
-        result = [...result].sort((a, b) => b.savingsPercent - a.savingsPercent);
-        break;
+        return result.sort((a, b) => b.savingsPercent - a.savingsPercent);
       case "price-asc":
-        result = [...result].sort((a, b) => a.currentPrice - b.currentPrice);
-        break;
+        return result.sort((a, b) => a.currentPrice - b.currentPrice);
       case "price-desc":
-        result = [...result].sort((a, b) => b.currentPrice - a.currentPrice);
-        break;
+        return result.sort((a, b) => b.currentPrice - a.currentPrice);
       case "ram-desc":
-        result = [...result].sort(
+        return result.sort(
           (a, b) =>
             getSortableSpecValue(b.memory) - getSortableSpecValue(a.memory)
         );
-        break;
       case "storage-desc":
-        result = [...result].sort(
+        return result.sort(
           (a, b) =>
             getSortableSpecValue(b.storage) - getSortableSpecValue(a.storage)
         );
-        break;
-      case "newest":
-        result = [...result].sort(
-          (a, b) => new Date(b.firstSeen).getTime() - new Date(a.firstSeen).getTime()
+      case "appearances-desc":
+        return result.sort(
+          (a, b) =>
+            b.appearanceCount - a.appearanceCount ||
+            new Date(b.appearanceLastSeen).getTime() -
+              new Date(a.appearanceLastSeen).getTime()
         );
-        break;
+      case "newest":
+        return result.sort(
+          (a, b) =>
+            new Date(b.appearanceFirstSeen).getTime() -
+            new Date(a.appearanceFirstSeen).getTime()
+        );
     }
+  };
 
-    return result;
+  const filtered = useMemo(() => {
+    return sortProducts(products.filter(matchesFilters));
   }, [
     products,
     selectedProductLines,
@@ -265,7 +269,7 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
   ]);
 
   const filteredUnavailableProducts = useMemo(
-    () => unavailableProducts.filter(matchesFilters),
+    () => sortProducts(unavailableProducts.filter(matchesFilters)),
     [
       unavailableProducts,
       selectedProductLines,
@@ -274,6 +278,8 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       selectedStorages,
       selectedScreenSizes,
       selectedPriceMovements,
+      sort,
+      dealInsightsByPartNumber,
     ]
   );
 

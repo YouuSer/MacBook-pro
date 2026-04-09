@@ -9,6 +9,7 @@ export type SortOption =
   | "price-desc"
   | "ram-desc"
   | "storage-desc"
+  | "appearances-desc"
   | "newest";
 
 interface FilterBarProps {
@@ -134,6 +135,7 @@ export function FilterBar({
             <option value="price-desc">Prix décroissant</option>
             <option value="ram-desc">RAM</option>
             <option value="storage-desc">Stockage</option>
+            <option value="appearances-desc">Apparitions</option>
             <option value="newest">Plus récents</option>
           </select>
         </div>

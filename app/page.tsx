@@ -1,7 +1,7 @@
 import { getDb, inspectDbConfig } from "@/lib/db";
 import { priceHistory, products, scrapeRuns } from "@/lib/schema";
 import { parseCoreCounts, resolveProductLine } from "@/lib/product-catalog";
-import { desc } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import type { Product } from "@/lib/types";
 import { toApiError } from "@/lib/api-error";
 import { ProductGrid } from "./components/ProductGrid";
@@ -10,6 +10,21 @@ import { ThemeToggle } from "./components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
 const PRICE_EPSILON = 0.001;
+const DEFAULT_SCRAPE_INTERVAL_MS = 30 * 60 * 1000;
+const MIN_APPEARANCE_GAP_MS = 45 * 60 * 1000;
+
+interface PriceHistoryRow {
+  partNumber: string;
+  price: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
+interface AppearanceStats {
+  appearanceCount: number;
+  appearanceFirstSeen: string;
+  appearanceLastSeen: string;
+}
 
 function formatParisDateTime(value: string) {
   return new Date(value).toLocaleString("fr-FR", {
@@ -21,29 +36,120 @@ function isSamePrice(a: number, b: number) {
   return Math.abs(a - b) < PRICE_EPSILON;
 }
 
-function buildDistinctPriceHistory(
-  rows: Array<{ partNumber: string; price: number }>
-) {
-  const historyByPartNumber = new Map<string, number[]>();
+function getMedian(values: number[]) {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2 === 0) {
+    return (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  return sorted[middle];
+}
+
+function buildHistoryByPart(rows: PriceHistoryRow[]) {
+  const historyByPartNumber = new Map<string, PriceHistoryRow[]>();
 
   for (const row of rows) {
     const history = historyByPartNumber.get(row.partNumber);
 
     if (!history) {
-      historyByPartNumber.set(row.partNumber, [row.price]);
+      historyByPartNumber.set(row.partNumber, [row]);
       continue;
     }
 
-    if (!isSamePrice(history[history.length - 1], row.price)) {
-      history.push(row.price);
-    }
+    history.push(row);
   }
 
   return historyByPartNumber;
 }
 
-function getPreviousDistinctPrice(currentPrice: number, history: number[]) {
-  return history.find((price) => !isSamePrice(price, currentPrice)) ?? null;
+function estimateAppearanceGapMs(rows: Array<{ scrapedAt: string }>) {
+  const timestamps = rows
+    .map((row) => new Date(row.scrapedAt).getTime())
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+  const intervals: number[] = [];
+
+  for (let index = 1; index < timestamps.length; index++) {
+    const interval = timestamps[index] - timestamps[index - 1];
+
+    if (interval > 0) {
+      intervals.push(interval);
+    }
+  }
+
+  const medianInterval = getMedian(intervals) || DEFAULT_SCRAPE_INTERVAL_MS;
+
+  return Math.max(MIN_APPEARANCE_GAP_MS, medianInterval * 1.5);
+}
+
+function buildAppearanceStats(
+  historyByPartNumber: Map<string, PriceHistoryRow[]>,
+  appearanceGapMs: number
+) {
+  const statsByPartNumber = new Map<string, AppearanceStats>();
+
+  for (const [partNumber, historyRows] of historyByPartNumber.entries()) {
+    if (historyRows.length === 0) {
+      continue;
+    }
+
+    const appearances: Array<{ firstSeenAt: string; lastSeenAt: string }> = [];
+
+    for (const row of historyRows) {
+      const currentAppearance = appearances[appearances.length - 1];
+
+      if (!currentAppearance) {
+        appearances.push({
+          firstSeenAt: row.firstSeenAt,
+          lastSeenAt: row.lastSeenAt,
+        });
+        continue;
+      }
+
+      const gapMs =
+        new Date(row.firstSeenAt).getTime() -
+        new Date(currentAppearance.lastSeenAt).getTime();
+
+      if (gapMs > appearanceGapMs) {
+        appearances.push({
+          firstSeenAt: row.firstSeenAt,
+          lastSeenAt: row.lastSeenAt,
+        });
+        continue;
+      }
+
+      currentAppearance.lastSeenAt = row.lastSeenAt;
+    }
+
+    const latestAppearance = appearances[appearances.length - 1];
+
+    statsByPartNumber.set(partNumber, {
+      appearanceCount: appearances.length,
+      appearanceFirstSeen: latestAppearance.firstSeenAt,
+      appearanceLastSeen: latestAppearance.lastSeenAt,
+    });
+  }
+
+  return statsByPartNumber;
+}
+
+function getPreviousDistinctPrice(
+  currentPrice: number,
+  historyRows: PriceHistoryRow[]
+) {
+  for (let index = historyRows.length - 1; index >= 0; index--) {
+    if (!isSamePrice(historyRows[index].price, currentPrice)) {
+      return historyRows[index].price;
+    }
+  }
+
+  return null;
 }
 
 function getPriceTrend(
@@ -87,9 +193,17 @@ export default async function Home() {
       .select({
         partNumber: priceHistory.partNumber,
         price: priceHistory.price,
+        firstSeenAt: priceHistory.firstSeenAt,
+        lastSeenAt: priceHistory.lastSeenAt,
       })
       .from(priceHistory)
-      .orderBy(desc(priceHistory.firstSeenAt));
+      .orderBy(asc(priceHistory.firstSeenAt));
+    const successfulRuns = await db
+      .select({ scrapedAt: scrapeRuns.scrapedAt })
+      .from(scrapeRuns)
+      .where(eq(scrapeRuns.status, "success"))
+      .orderBy(desc(scrapeRuns.scrapedAt))
+      .limit(60);
 
     const lastRun = await db
       .select()
@@ -102,12 +216,21 @@ export default async function Home() {
     const twentyFourHoursAgo = new Date(
       Date.now() - 24 * 60 * 60 * 1000
     ).toISOString();
-    const distinctPriceHistory = buildDistinctPriceHistory(historyRows);
+    const historyByPartNumber = buildHistoryByPart(historyRows);
+    const appearanceGapMs = estimateAppearanceGapMs(successfulRuns);
+    const appearanceStatsByPartNumber = buildAppearanceStats(
+      historyByPartNumber,
+      appearanceGapMs
+    );
 
     const allProducts = rows.map((row) => {
       const { cpuCores, gpuCores } = parseCoreCounts(row.title);
-      const priceHistoryForProduct =
-        distinctPriceHistory.get(row.partNumber) ?? [];
+      const priceHistoryForProduct = historyByPartNumber.get(row.partNumber) ?? [];
+      const appearanceStats = appearanceStatsByPartNumber.get(row.partNumber) ?? {
+        appearanceCount: 1,
+        appearanceFirstSeen: row.firstSeen,
+        appearanceLastSeen: row.lastSeen,
+      };
       const previousPrice = getPreviousDistinctPrice(
         row.currentPrice,
         priceHistoryForProduct
@@ -119,6 +242,9 @@ export default async function Home() {
         currentPrice: row.currentPrice,
         previousPrice,
         priceTrend: getPriceTrend(row.currentPrice, previousPrice),
+        appearanceCount: appearanceStats.appearanceCount,
+        appearanceFirstSeen: appearanceStats.appearanceFirstSeen,
+        appearanceLastSeen: appearanceStats.appearanceLastSeen,
         originalPrice: row.originalPrice,
         savingsPercent: row.savingsPercent,
         savings: row.savings ?? "",
@@ -135,7 +261,7 @@ export default async function Home() {
         imageUrl: row.imageUrl ?? "",
         firstSeen: row.firstSeen,
         lastSeen: row.lastSeen,
-        isNew: row.firstSeen >= twentyFourHoursAgo,
+        isNew: appearanceStats.appearanceFirstSeen >= twentyFourHoursAgo,
       };
     });
 

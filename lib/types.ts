@@ -69,6 +69,9 @@ export interface Product {
   currentPrice: number;
   previousPrice: number | null;
   priceTrend: PriceTrend | null;
+  appearanceCount: number;
+  appearanceFirstSeen: string;
+  appearanceLastSeen: string;
   originalPrice: number;
   savingsPercent: number;
   savings: string;
