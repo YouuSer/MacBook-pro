@@ -320,14 +320,9 @@ export function ProductCard({
             <button
               type="button"
               onClick={() => onShowHistory(product)}
-              className="group flex w-full items-center justify-center gap-2 text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-blue)]"
+              className="w-full text-center text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-blue)]"
             >
-              <span>Historique des prix</span>
-              {appearanceCountLabel && (
-                <span className="text-[var(--text-tertiary)] transition-colors group-hover:text-[var(--accent-blue)]">
-                  · {appearanceCountLabel}
-                </span>
-              )}
+              Historique des prix{appearanceCountLabel ? ` · ${appearanceCountLabel}` : ""}
             </button>
           )}
         </div>
