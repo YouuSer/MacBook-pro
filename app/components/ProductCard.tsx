@@ -52,17 +52,36 @@ export function ProductCard({
   const topTagClasses = isTopAir
     ? "bg-sky-500 shadow-sm shadow-sky-500/30"
     : "bg-amber-500 shadow-sm shadow-amber-500/30";
-  const seenAtDate = new Date(product.firstSeen).toLocaleDateString("fr-FR", {
+  const seenAtDate = new Date(product.appearanceFirstSeen).toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "short",
     year: "numeric",
     timeZone: "Europe/Paris",
   });
-  const seenAtTime = new Date(product.firstSeen).toLocaleTimeString("fr-FR", {
+  const seenAtTime = new Date(product.appearanceFirstSeen).toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Europe/Paris",
   });
+  const expiredAtDate = new Date(product.appearanceLastSeen).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Paris",
+  });
+  const expiredAtTime = new Date(product.appearanceLastSeen).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Paris",
+  });
+  const appearanceLabel = `Vu le ${seenAtDate} ${seenAtTime}`;
+  const expirationLabel = isExpired
+    ? `Expiré le ${expiredAtDate} ${expiredAtTime}`
+    : null;
+  const appearanceCountLabel =
+    product.appearanceCount > 1
+      ? `${product.appearanceCount} apparitions`
+      : null;
   const priceTrendTitle =
     product.priceTrend === "down" && product.previousPrice !== null
       ? `Prix en baisse depuis ${product.previousPrice.toLocaleString("fr-FR")} €`
@@ -207,7 +226,8 @@ export function ProductCard({
               {topReasons.join(" · ")}
             </p>
             <span className="ml-auto shrink-0 whitespace-nowrap text-[var(--text-tertiary)]">
-              Vu le {seenAtDate} {seenAtTime}
+              {appearanceLabel}
+              {expirationLabel ? ` · ${expirationLabel}` : ""}
             </span>
           </div>
         )}
@@ -215,7 +235,8 @@ export function ProductCard({
         {!topReasons.length && (
           <div className="flex text-[11px] text-[var(--text-tertiary)]">
             <span className="ml-auto">
-              Vu le {seenAtDate} {seenAtTime}
+              {appearanceLabel}
+              {expirationLabel ? ` · ${expirationLabel}` : ""}
             </span>
           </div>
         )}
@@ -297,10 +318,16 @@ export function ProductCard({
           )}
           {onShowHistory && (
             <button
+              type="button"
               onClick={() => onShowHistory(product)}
-              className="w-full text-center text-xs text-[var(--text-secondary)] hover:text-[var(--accent-blue)] transition-colors"
+              className="flex w-full items-center justify-center gap-2 text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-blue)]"
             >
-              Historique des prix
+              <span>Historique des prix</span>
+              {appearanceCountLabel && (
+                <span className="text-[var(--text-tertiary)]">
+                  · {appearanceCountLabel}
+                </span>
+              )}
             </button>
           )}
         </div>
