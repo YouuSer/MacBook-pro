@@ -40,3 +40,31 @@ export const scrapeRuns = sqliteTable("scrape_runs", {
   status: text("status"),
   errorMessage: text("error_message"),
 });
+
+export const alertRules = sqliteTable("alert_rules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  channelType: text("channel_type").notNull(),
+  webhookUrl: text("webhook_url").notNull(),
+  triggersJson: text("triggers_json").notNull(),
+  filtersJson: text("filters_json").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const alertDeliveries = sqliteTable("alert_deliveries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ruleId: integer("rule_id")
+    .notNull()
+    .references(() => alertRules.id),
+  partNumber: text("part_number").notNull(),
+  productTitle: text("product_title").notNull(),
+  eventType: text("event_type").notNull(),
+  currentPrice: real("current_price").notNull(),
+  previousPrice: real("previous_price"),
+  status: text("status").notNull(),
+  errorMessage: text("error_message"),
+  scrapedAt: text("scraped_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});

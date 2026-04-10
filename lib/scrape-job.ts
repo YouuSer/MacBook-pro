@@ -1,22 +1,137 @@
 import { getDb } from "./db";
-import { products, priceHistory, scrapeRuns } from "./schema";
+import { alertDeliveries, alertRules, priceHistory, products, scrapeRuns } from "./schema";
 import { scrapeAppleRefurb } from "./scraper";
 import { desc, eq } from "drizzle-orm";
+import {
+  buildAlertWebhookRequest,
+  getAlertCandidateForScrapedProduct,
+  parseAlertRuleRow,
+  ruleMatchesAlertCandidate,
+  type AlertCandidate,
+  type AlertRule,
+  type AlertRuleRow,
+} from "./alerts";
+import type { ScrapedProduct } from "./scraper";
 
-function isReappearingProduct(
-  lastSeen: string | null | undefined,
-  lastSuccessfulScrapedAt: string | null
-) {
-  if (!lastSeen || !lastSuccessfulScrapedAt) {
-    return false;
+async function loadActiveAlertRules() {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(alertRules)
+    .where(eq(alertRules.enabled, true))
+    .orderBy(desc(alertRules.updatedAt));
+
+  return rows
+    .map((row) => parseAlertRuleRow(row as AlertRuleRow))
+    .filter((rule) => rule.enabled);
+}
+
+async function storeAlertDelivery(args: {
+  rule: AlertRule;
+  candidate: AlertCandidate;
+  status: "success" | "error";
+  errorMessage: string | null;
+  now: string;
+}) {
+  const db = getDb();
+  await db.insert(alertDeliveries).values({
+    ruleId: args.rule.id,
+    partNumber: args.candidate.partNumber,
+    productTitle: args.candidate.title,
+    eventType: args.candidate.eventType,
+    currentPrice: args.candidate.currentPrice,
+    previousPrice: args.candidate.previousPrice,
+    status: args.status,
+    errorMessage: args.errorMessage,
+    scrapedAt: args.now,
+    createdAt: args.now,
+  });
+}
+
+async function deliverAlert(rule: AlertRule, candidate: AlertCandidate, now: string) {
+  let status: "success" | "error" = "success";
+  let errorMessage: string | null = null;
+
+  try {
+    const request = buildAlertWebhookRequest(rule, candidate);
+    const response = await fetch(rule.webhookUrl, {
+      method: "POST",
+      headers: request.headers,
+      body: request.body,
+    });
+
+    if (!response.ok) {
+      status = "error";
+      errorMessage = `Webhook returned ${response.status}`;
+    }
+  } catch (error) {
+    status = "error";
+    errorMessage = error instanceof Error ? error.message : "Unknown webhook error";
   }
 
-  return lastSeen < lastSuccessfulScrapedAt;
+  try {
+    await storeAlertDelivery({
+      rule,
+      candidate,
+      status,
+      errorMessage,
+      now,
+    });
+  } catch (error) {
+    console.error("Failed to store alert delivery", error);
+  }
+}
+
+async function deliverAlertNotifications(candidates: AlertCandidate[], now: string) {
+  if (candidates.length === 0) {
+    return;
+  }
+
+  const rules = await loadActiveAlertRules();
+
+  if (rules.length === 0) {
+    return;
+  }
+
+  const deliveries = candidates.flatMap((candidate) =>
+    rules
+      .filter((rule) => ruleMatchesAlertCandidate(rule, candidate))
+      .map((rule) => deliverAlert(rule, candidate, now))
+  );
+
+  if (deliveries.length === 0) {
+    return;
+  }
+
+  await Promise.allSettled(deliveries);
+}
+
+function toAlertCandidate(product: ScrapedProduct, existingProduct: {
+  currentPrice: number;
+  lastSeen: string;
+} | undefined, lastSuccessfulScrapedAt: string | null) {
+  return getAlertCandidateForScrapedProduct({
+    existingProduct,
+    lastSuccessfulScrapedAt,
+    scrapedProduct: {
+      partNumber: product.partNumber,
+      title: product.title,
+      currentPrice: product.currentPrice,
+      productLine: product.productLine,
+      chip: product.chip,
+      memory: product.memory,
+      storage: product.storage,
+      screenSize: product.screenSize,
+      productUrl: product.productUrl,
+      imageUrl: product.imageUrl,
+    },
+  });
 }
 
 export async function runScrapeJob() {
   const db = getDb();
   const now = new Date().toISOString();
+  const alertCandidates: AlertCandidate[] = [];
 
   const { products: scraped, totalFound } = await scrapeAppleRefurb();
 
@@ -38,10 +153,13 @@ export async function runScrapeJob() {
 
   for (const p of scraped) {
     const exists = existingMap.get(p.partNumber);
-    const isReappearing = isReappearingProduct(
-      exists?.lastSeen,
-      lastSuccessfulScrapedAt
-    );
+    const alertCandidate = toAlertCandidate(p, exists, lastSuccessfulScrapedAt);
+    const isReappearing =
+      alertCandidate?.eventType === "new_match" && Boolean(exists);
+
+    if (alertCandidate) {
+      alertCandidates.push(alertCandidate);
+    }
 
     if (exists) {
       await db
@@ -119,6 +237,12 @@ export async function runScrapeJob() {
     newProducts: newCount,
     status: "success",
   });
+
+  try {
+    await deliverAlertNotifications(alertCandidates, now);
+  } catch (error) {
+    console.error("Alert delivery pipeline failed", error);
+  }
 
   return {
     totalFound,
