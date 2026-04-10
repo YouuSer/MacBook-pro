@@ -6,6 +6,11 @@ import {
   getProductLineLabel,
   normalizeScreenSize,
 } from "@/lib/product-catalog";
+import {
+  getSortableCapacityValue,
+  normalizeFilterTextValue,
+  sortSpecValues,
+} from "@/lib/product-filters";
 import type { Product } from "@/lib/types";
 import { ProductCard } from "./ProductCard";
 import { FilterBar, type SortOption } from "./FilterBar";
@@ -37,44 +42,6 @@ function getTopLineLabel(productLine: Product["productLine"]) {
   return productLine === "air" ? "Top Air" : "Top Pro";
 }
 
-function normalizeSpecValue(value: string): string {
-  return value.trim().toUpperCase();
-}
-
-function toCapacityValue(value: string): number {
-  const normalized = normalizeSpecValue(value).replace(",", ".");
-  const match = normalized.match(/(\d+(?:\.\d+)?)\s*(TB|GB)/);
-  if (match) {
-    const amount = parseFloat(match[1]);
-    return match[2] === "TB" ? amount * 1024 : amount;
-  }
-
-  const fallback = normalized.match(/(\d+(?:\.\d+)?)/);
-  return fallback ? parseFloat(fallback[1]) : Number.POSITIVE_INFINITY;
-}
-
-function sortSpecValues(values: string[]): string[] {
-  return [...values].sort((a, b) => {
-    const aCapacity = toCapacityValue(a);
-    const bCapacity = toCapacityValue(b);
-
-    if (
-      Number.isFinite(aCapacity) &&
-      Number.isFinite(bCapacity) &&
-      aCapacity !== bCapacity
-    ) {
-      return aCapacity - bCapacity;
-    }
-
-    return a.localeCompare(b, "fr", { numeric: true });
-  });
-}
-
-function getSortableSpecValue(value: string): number {
-  const parsed = toCapacityValue(normalizeSpecValue(value));
-  return Number.isFinite(parsed) ? parsed : -1;
-}
-
 export function ProductGrid({ products, unavailableProducts = [] }: ProductGridProps) {
   const [selectedProductLines, setSelectedProductLines] = useState<Set<string>>(new Set());
   const [selectedChips, setSelectedChips] = useState<Set<string>>(new Set());
@@ -98,14 +65,14 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
 
   const memories = useMemo(() => {
     const set = new Set(
-      products.map((p) => normalizeSpecValue(p.memory)).filter(Boolean)
+      products.map((p) => normalizeFilterTextValue(p.memory)).filter(Boolean)
     );
     return sortSpecValues(Array.from(set));
   }, [products]);
 
   const storages = useMemo(() => {
     const set = new Set(
-      products.map((p) => normalizeSpecValue(p.storage)).filter(Boolean)
+      products.map((p) => normalizeFilterTextValue(p.storage)).filter(Boolean)
     );
     return sortSpecValues(Array.from(set));
   }, [products]);
@@ -179,14 +146,14 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
 
     if (
       selectedMemories.size > 0 &&
-      !selectedMemories.has(normalizeSpecValue(product.memory))
+      !selectedMemories.has(normalizeFilterTextValue(product.memory))
     ) {
       return false;
     }
 
     if (
       selectedStorages.size > 0 &&
-      !selectedStorages.has(normalizeSpecValue(product.storage))
+      !selectedStorages.has(normalizeFilterTextValue(product.storage))
     ) {
       return false;
     }
@@ -231,12 +198,14 @@ export function ProductGrid({ products, unavailableProducts = [] }: ProductGridP
       case "ram-desc":
         return result.sort(
           (a, b) =>
-            getSortableSpecValue(b.memory) - getSortableSpecValue(a.memory)
+            getSortableCapacityValue(b.memory) -
+            getSortableCapacityValue(a.memory)
         );
       case "storage-desc":
         return result.sort(
           (a, b) =>
-            getSortableSpecValue(b.storage) - getSortableSpecValue(a.storage)
+            getSortableCapacityValue(b.storage) -
+            getSortableCapacityValue(a.storage)
         );
       case "appearances-desc":
         return result.sort(
