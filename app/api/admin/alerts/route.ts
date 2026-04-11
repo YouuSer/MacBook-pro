@@ -8,6 +8,7 @@ import {
 } from "@/lib/alerts";
 import { getDb } from "@/lib/db";
 import { getProductFilterOptions } from "@/lib/product-filters";
+import { SUPPORTED_ADMIN_CHIP_OPTIONS } from "@/lib/product-catalog";
 import { alertDeliveries, alertRules, products } from "@/lib/schema";
 import { toApiError } from "@/lib/api-error";
 
@@ -62,7 +63,7 @@ export async function GET() {
 
     const rules = ruleRows.map((row) => parseAlertRuleRow(row));
     const ruleNameById = new Map(rules.map((rule) => [rule.id, rule.name]));
-    const options = getProductFilterOptions(
+    const baseOptions = getProductFilterOptions(
       productRows
         .filter(
           (
@@ -83,6 +84,16 @@ export async function GET() {
           screenSize: row.screenSize ?? "",
         }))
     );
+
+    const options = {
+      ...baseOptions,
+      chips: [
+        ...SUPPORTED_ADMIN_CHIP_OPTIONS,
+        ...baseOptions.chips.filter(
+          (chip) => !SUPPORTED_ADMIN_CHIP_OPTIONS.includes(chip)
+        ),
+      ],
+    };
 
     return NextResponse.json({
       rules,

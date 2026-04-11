@@ -1,5 +1,7 @@
 export type ProductLine = "air" | "pro";
 
+const CHIP_GENERATIONS = ["1", "2", "3", "4", "5"] as const;
+
 const CHIP_REGEX = /\b(M[1-5])(?:\s+(Pro|Max|Ultra))?\b/i;
 const STANDARD_CHIP_REGEX = /^M[1-5]$/;
 const PRO_CHIP_REGEX = /^M[1-5] Pro$/;
@@ -13,6 +15,11 @@ const SCREEN_SIZE_LABELS: Record<string, string> = {
   "15": '15"',
   "16": '16"',
 };
+
+export const SUPPORTED_ADMIN_CHIP_OPTIONS = CHIP_GENERATIONS.flatMap((generation) => [
+  `M${generation}`,
+  `M${generation} PRO`,
+]);
 
 export function normalizeAppleText(value: string): string {
   return value.replace(/[\u00a0\u202f]/g, " ").replace(/\s+/g, " ").trim();
