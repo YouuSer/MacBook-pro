@@ -11,8 +11,26 @@ export default async function AdminAlertsPage() {
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-10">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+      <div className="mb-8">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--fg)]"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Retour au site
+        </Link>
+        <div className="mt-5">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-blue)]">
             Admin
           </p>
@@ -25,12 +43,6 @@ export default async function AdminAlertsPage() {
             surveillés.
           </p>
         </div>
-        <Link
-          href="/"
-          className="inline-flex items-center rounded-full border border-[var(--border)] px-4 py-2 text-sm text-[var(--fg)] transition-colors hover:border-[var(--border-hover)]"
-        >
-          Retour au site
-        </Link>
       </div>
 
       {!tokenConfigured ? (

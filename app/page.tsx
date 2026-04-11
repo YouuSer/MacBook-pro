@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getDb, inspectDbConfig } from "@/lib/db";
 import { priceHistory, products, scrapeRuns } from "@/lib/schema";
 import { parseCoreCounts, resolveProductLine } from "@/lib/product-catalog";
@@ -288,6 +289,26 @@ export default async function Home() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/admin/alerts"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--fg)]"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M15 3h6v6" />
+                <path d="M10 14 21 3" />
+              </svg>
+              <span>Admin</span>
+            </Link>
             <ScrapeButton />
             <ThemeToggle />
           </div>
