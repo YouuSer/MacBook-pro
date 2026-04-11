@@ -22,6 +22,10 @@ interface AdminAlertsResponse {
   deliveries: AlertDelivery[];
 }
 
+function formatChipLabel(value: string) {
+  return value.replace(/\bPRO\b/g, "Pro");
+}
+
 function SectionCard({
   title,
   description,
@@ -132,6 +136,51 @@ function FilterGroup({
         onToggle={onToggle}
         renderLabel={renderLabel}
       />
+    </div>
+  );
+}
+
+function ChipFilterGroup({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: string[];
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  const standardOptions = options.filter((option) => !/\s+PRO$/i.test(option));
+  const proOptions = options.filter((option) => /\s+PRO$/i.test(option));
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+        Puce
+      </p>
+      {options.length === 0 ? (
+        <p className="text-sm text-[var(--text-tertiary)]">
+          Aucune option détectée pour le moment.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <OptionPills
+              options={standardOptions}
+              selected={selected}
+              onToggle={onToggle}
+              renderLabel={formatChipLabel}
+            />
+          </div>
+          <div>
+            <OptionPills
+              options={proOptions}
+              selected={selected}
+              onToggle={onToggle}
+              renderLabel={formatChipLabel}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -269,8 +318,7 @@ function AlertRuleEditor({
           }
           renderLabel={(value) => getProductLineLabelForAlert(value as ProductLine)}
         />
-        <FilterGroup
-          label="Puce"
+        <ChipFilterGroup
           options={options.chips}
           selected={values.filters.chips}
           onToggle={(value) =>
