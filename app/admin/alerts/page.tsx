@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { hasAdminSession, isAdminTokenConfigured } from "@/lib/admin-auth";
 import { AlertLoginForm } from "./AlertLoginForm";
 import { AdminAlertsClient } from "./AdminAlertsClient";
@@ -10,18 +11,26 @@ export default async function AdminAlertsPage() {
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-blue)]">
-          Admin
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-[var(--fg)]">
-          Alertes webhook
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm text-[var(--text-secondary)]">
-          Créez des règles Discord ou Slack pour être notifié lors d&apos;une
-          nouvelle disponibilité ou d&apos;une baisse de prix sur les MacBook
-          surveillés.
-        </p>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent-blue)]">
+            Admin
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-[var(--fg)]">
+            Alertes webhook
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm text-[var(--text-secondary)]">
+            Créez des règles Discord ou Slack pour être notifié lors d&apos;une
+            nouvelle disponibilité ou d&apos;une baisse de prix sur les MacBook
+            surveillés.
+          </p>
+        </div>
+        <Link
+          href="/"
+          className="inline-flex items-center rounded-full border border-[var(--border)] px-4 py-2 text-sm text-[var(--fg)] transition-colors hover:border-[var(--border-hover)]"
+        >
+          Retour au site
+        </Link>
       </div>
 
       {!tokenConfigured ? (
