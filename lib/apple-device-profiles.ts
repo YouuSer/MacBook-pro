@@ -69,7 +69,7 @@ export function getAppleDeviceProfile(product: Product): AppleDeviceProfile {
     return APPLE_DEVICE_PROFILES.pro_13_legacy;
   }
 
-  if (/\bPro$/i.test(product.chip)) {
+  if (/\b(Pro|Max|Ultra)$/i.test(product.chip)) {
     return APPLE_DEVICE_PROFILES.pro_14_16_pro;
   }
 

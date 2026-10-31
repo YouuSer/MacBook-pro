@@ -15,6 +15,7 @@ export type FacetKey = FilterKey | "priceMovements";
 
 export type SortOption =
   | "best-deal"
+  | "dev-fit"
   | "discount"
   | "price-asc"
   | "price-desc"
@@ -25,6 +26,7 @@ export type SortOption =
 
 export const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
   { value: "best-deal", label: "Meilleure affaire" },
+  { value: "dev-fit", label: "Profil dev (Mac)" },
   { value: "discount", label: "Remise" },
   { value: "price-asc", label: "Prix croissant" },
   { value: "price-desc", label: "Prix décroissant" },

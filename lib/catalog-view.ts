@@ -1,5 +1,10 @@
 import { matchesFacets, type CatalogFilterState, type SortOption } from "./catalog-filters";
-import { getDealInsights, type DealInsights } from "./deal-score";
+import {
+  buildDealContext,
+  getDealInsights,
+  NOTABLE_DEAL_SCORE,
+  type DealInsights,
+} from "./deal-score";
 import { compareProductLines, type Category } from "./product-catalog";
 import { getSortableCapacityValue } from "./product-filters";
 import type { Product } from "./types";
@@ -29,8 +34,14 @@ export function sortProducts(
     case "best-deal":
       return result.sort(
         (a, b) =>
-          (dealInsights.get(b.partNumber)?.totalScore ?? 0) -
-          (dealInsights.get(a.partNumber)?.totalScore ?? 0)
+          (dealInsights.get(b.partNumber)?.dealScore ?? 0) -
+          (dealInsights.get(a.partNumber)?.dealScore ?? 0)
+      );
+    case "dev-fit":
+      return result.sort(
+        (a, b) =>
+          (dealInsights.get(b.partNumber)?.devFitScore ?? -1) -
+          (dealInsights.get(a.partNumber)?.devFitScore ?? -1)
       );
     case "discount":
       return result.sort((a, b) => b.savingsPercent - a.savingsPercent);
@@ -60,16 +71,21 @@ export function sortProducts(
   }
 }
 
+// Meilleure affaire d'une liste, seulement si son score est assez bon pour être mis en avant.
 export function pickTop(products: Product[], dealInsights: Map<string, DealInsights>) {
-  return products.reduce<Product | null>(
-    (best, product) =>
-      !best ||
-      (dealInsights.get(product.partNumber)?.totalScore ?? 0) >
-        (dealInsights.get(best.partNumber)?.totalScore ?? 0)
+  const best = products.reduce<Product | null>(
+    (current, product) =>
+      !current ||
+      (dealInsights.get(product.partNumber)?.dealScore ?? 0) >
+        (dealInsights.get(current.partNumber)?.dealScore ?? 0)
         ? product
-        : best,
+        : current,
     null
   );
+
+  return best && (dealInsights.get(best.partNumber)?.dealScore ?? 0) >= NOTABLE_DEAL_SCORE
+    ? best
+    : null;
 }
 
 function groupByProductLine(products: Product[]) {
@@ -80,16 +96,11 @@ function groupByProductLine(products: Product[]) {
   return byLine;
 }
 
-// Le score compare chaque offre aux autres offres disponibles de la même famille.
-export function buildDealInsights(products: Product[]) {
-  const peersByLine = groupByProductLine(products);
-
-  return new Map(
-    products.map((product) => [
-      product.partNumber,
-      getDealInsights(product, peersByLine.get(product.productLine) ?? []),
-    ])
-  );
+// Le score compare chaque offre disponible à l'historique de sa configuration (offres expirées
+// comprises) et aux configs équivalentes disponibles en même temps.
+export function buildDealInsights(available: Product[], all: Product[]) {
+  const context = buildDealContext(available, all);
+  return new Map(available.map((product) => [product.partNumber, getDealInsights(product, context)]));
 }
 
 export function buildFamilyGroups(args: {

@@ -8,3 +8,5 @@ UPDATE `products` SET `product_line` = 'macbookpro' WHERE `product_line` = 'pro'
 UPDATE `favorite_configs` SET `config_key` = 'macbookair' || substr(`config_key`, 4) WHERE `config_key` LIKE 'air|%';--> statement-breakpoint
 UPDATE `favorite_configs` SET `config_key` = 'macbookpro' || substr(`config_key`, 4) WHERE `config_key` LIKE 'pro|%';--> statement-breakpoint
 UPDATE `alert_rules` SET `filters_json` = replace(replace(`filters_json`, '"air"', '"macbookair"'), '"pro"', '"macbookpro"');
+--> statement-breakpoint
+UPDATE `alert_rules` SET `filters_json` = json_set(`filters_json`, '$.categories', json('["mac"]')) WHERE json_extract(`filters_json`, '$.categories') IS NULL;

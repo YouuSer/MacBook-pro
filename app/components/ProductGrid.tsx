@@ -94,7 +94,10 @@ export function ProductGrid({
     );
     return counts;
   }, [products]);
-  const dealInsights = useMemo(() => buildDealInsights(products), [products]);
+  const dealInsights = useMemo(
+    () => buildDealInsights(products, allProducts),
+    [products, allProducts]
+  );
 
   const facetGroups = useMemo(
     () =>
@@ -146,7 +149,7 @@ export function ProductGrid({
         dealInsights,
       }).map(({ product, insights }) => ({
         product,
-        score: insights.totalScore,
+        score: insights.dealScore,
         reasons: insights.reasons,
         label: `Top ${product.productLineLabel}`,
       })),

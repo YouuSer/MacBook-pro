@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDealContext,
+  getChipScore,
+  getDealInsights,
+  getDevFitScore,
+  NOTABLE_DEAL_SCORE,
+} from "../lib/deal-score";
+import {
+  getProductFilterOptions,
+  matchesProductFilters,
+  normalizeProductFilters,
+} from "../lib/product-filters";
+import {
   buildFacetOptions,
   createDefaultFilterState,
   matchesQuery,
   parseFilterState,
   serializeFilterState,
 } from "../lib/catalog-filters";
-import { buildCatalogStats, buildFamilyGroups } from "../lib/catalog-view";
+import { buildCatalogStats, buildDealInsights, buildFamilyGroups, pickTop } from "../lib/catalog-view";
 import { matchesFavoriteConfig, buildFavoriteConfigKey } from "../lib/favorites";
 import {
   getCategoryForProductLine,
@@ -240,5 +252,93 @@ describe("product display", () => {
     expect(getSpecLine(mac)).toBe("CPU 12 · GPU 16 · 24 Go · 512 Go · Noir sidéral");
     expect(getShortTitle(iphone)).toBe("iPhone 16 Pro");
     expect(getSpecLine(iphone)).toBe("256 Go · Titane sable");
+  });
+});
+
+describe("deal score", () => {
+  it("rewards the lowest price ever seen for a config over a big Apple discount", () => {
+    const cheapNow = makeProduct({
+      partNumber: "A",
+      currentPrice: 1000,
+      priceSeries: [1200, 1150, 1000],
+      appearanceCount: 5,
+      savingsPercent: 10,
+    });
+    const atUsualPrice = makeProduct({
+      partNumber: "B",
+      chip: "M4 Max",
+      currentPrice: 3000,
+      priceSeries: [2800, 3000],
+      appearanceCount: 5,
+      savingsPercent: 20,
+    });
+    const context = buildDealContext([cheapNow, atUsualPrice], [cheapNow, atUsualPrice]);
+    const cheap = getDealInsights(cheapNow, context);
+    const usual = getDealInsights(atUsualPrice, context);
+
+    expect(cheap.dealScore).toBeGreaterThan(usual.dealScore);
+    expect(cheap.reasons[0]).toBe("plus bas prix vu pour cette config");
+    expect(cheap.configLowestPrice).toBe(1000);
+  });
+
+  it("uses expired offers of the same config as price history", () => {
+    const expired = makeProduct({ partNumber: "OLD", currentPrice: 900, priceSeries: [900] });
+    const current = makeProduct({ partNumber: "NEW", currentPrice: 1100, priceSeries: [1100] });
+    const insights = getDealInsights(current, buildDealContext([current], [current, expired]));
+
+    expect(insights.configLowestPrice).toBe(900);
+    expect(insights.reasons).not.toContain("plus bas prix vu pour cette config");
+  });
+
+  it("flags the cheapest of equivalent configs available together", () => {
+    const silver = makeProduct({ partNumber: "S", color: "silver", currentPrice: 1000 });
+    const black = makeProduct({ partNumber: "K", color: "spaceblack", currentPrice: 1100 });
+    const insights = getDealInsights(silver, buildDealContext([silver, black], [silver, black]));
+
+    expect(insights.reasons).toContain("la moins chère des 2 configs équivalentes");
+  });
+
+  it("only promotes a family top pick above the notable threshold", () => {
+    const flat = makeProduct({ partNumber: "F", priceSeries: [1000, 1000], appearanceCount: 10, savingsPercent: 5 });
+    const insights = buildDealInsights([flat], [flat]);
+
+    expect(insights.get("F")!.dealScore).toBeLessThan(NOTABLE_DEAL_SCORE);
+    expect(pickTop([flat], insights)).toBeNull();
+  });
+
+  it("scores chips generically, including Max and A-series", () => {
+    expect(getChipScore("M4 Max")).toBeGreaterThan(getChipScore("M4 Pro"));
+    expect(getChipScore("M4 Pro")).toBeGreaterThan(getChipScore("M4"));
+    expect(getChipScore("M3 Ultra")).toBeGreaterThan(getChipScore("M3 Max"));
+    expect(getChipScore("A18 Pro")).toBe(30);
+  });
+
+  it("computes a dev profile for Macs only", () => {
+    expect(getDevFitScore(makeProduct({ chip: "M4 Max", memory: "48gb" }))!).toBeGreaterThan(
+      getDevFitScore(makeProduct({ chip: "M4", memory: "16gb" }))!
+    );
+    expect(getDevFitScore(makeProduct({ category: "iphone", productLine: "iphone16pro" }))).toBeNull();
+  });
+});
+
+describe("alert category filter", () => {
+  it("restricts rules to the selected categories", () => {
+    const filters = normalizeProductFilters({ categories: ["mac"] });
+    const base = { chip: "", memory: "", storage: "", screenSize: "" };
+
+    expect(matchesProductFilters({ ...base, productLine: "macmini" }, filters)).toBe(true);
+    expect(matchesProductFilters({ ...base, productLine: "iphone16pro" }, filters)).toBe(false);
+    expect(matchesProductFilters({ ...base, productLine: "pro" }, filters)).toBe(true);
+  });
+
+  it("drops unknown categories and lists only categories present in DB", () => {
+    expect(normalizeProductFilters({ categories: ["mac", "ipad" as never] }).categories).toEqual(["mac"]);
+    const base = { chip: "", memory: "", storage: "", screenSize: "" };
+    expect(
+      getProductFilterOptions([
+        { ...base, productLine: "homepod" },
+        { ...base, productLine: "macbookair" },
+      ]).categories
+    ).toEqual(["mac", "homepod"]);
   });
 });

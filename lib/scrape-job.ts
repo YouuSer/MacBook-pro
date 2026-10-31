@@ -337,6 +337,13 @@ export async function runScrapeJob() {
   // Get existing products to detect new ones
   const existing = await db.select().from(products);
   const existingMap = new Map(existing.map((p) => [p.partNumber, p]));
+  // Premier scrape d'une catégorie : tout son catalogue serait « nouveau ». On enregistre
+  // les offres sans envoyer d'alertes new_match pour éviter d'inonder les webhooks.
+  const knownCategories = new Set(
+    existing.map((row) =>
+      resolveCategory(row.category, resolveProductLine(row.productLine, row.title) ?? "")
+    )
+  );
 
   // On se base sur le dernier run reussi uniquement.
   // Un run en erreur ou un run concurrent ne doit pas créer une "réapparition" artificielle.
@@ -356,7 +363,10 @@ export async function runScrapeJob() {
     const isReappearing =
       alertCandidate?.eventType === "new_match" && Boolean(exists);
 
-    if (alertCandidate) {
+    if (
+      alertCandidate &&
+      (alertCandidate.eventType !== "new_match" || knownCategories.has(p.category))
+    ) {
       alertCandidates.push(alertCandidate);
     }
 

@@ -12,6 +12,8 @@ import {
 } from "@/lib/alerts";
 import {
   formatScreenSize,
+  getCategoryDefinition,
+  type Category,
   type ProductLine,
 } from "@/lib/product-catalog";
 import type { ProductFilterOptions } from "@/lib/product-filters";
@@ -301,6 +303,21 @@ function AlertRuleEditor({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <FilterGroup
+          label="Catégorie"
+          options={options.categories}
+          selected={values.filters.categories}
+          onToggle={(value) =>
+            onChange({
+              ...values,
+              filters: {
+                ...values.filters,
+                categories: toggleStringInArray(values.filters.categories, value) as Category[],
+              },
+            })
+          }
+          renderLabel={(value) => getCategoryDefinition(value as Category).label}
+        />
+        <FilterGroup
           label="Gamme"
           options={options.productLines}
           selected={values.filters.productLines}
@@ -398,6 +415,7 @@ function AlertRuleEditor({
 export function AdminAlertsClient() {
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [options, setOptions] = useState<ProductFilterOptions>({
+    categories: [],
     productLines: [],
     chips: [],
     memories: [],

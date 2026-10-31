@@ -1,4 +1,7 @@
 import {
+  CATEGORIES,
+  getCategoryForProductLine,
+  type Category,
   compareProductLines,
   normalizeProductLine,
   normalizeScreenSize,
@@ -6,6 +9,7 @@ import {
 } from "./product-catalog";
 
 export interface ProductFilterValues {
+  categories: Category[];
   productLines: ProductLine[];
   chips: string[];
   memories: string[];
@@ -22,6 +26,7 @@ export interface ProductFilterMatchable {
 }
 
 export interface ProductFilterOptions {
+  categories: Category[];
   productLines: ProductLine[];
   chips: string[];
   memories: string[];
@@ -35,6 +40,7 @@ function unique<T>(values: T[]) {
 
 export function createEmptyProductFilters(): ProductFilterValues {
   return {
+    categories: [],
     productLines: [],
     chips: [],
     memories: [],
@@ -101,6 +107,11 @@ export function normalizeProductFilters(
   const filters = value ?? {};
 
   return {
+    categories: unique(
+      (Array.isArray(filters.categories) ? filters.categories : []).filter(
+        (entry): entry is Category => (CATEGORIES as readonly string[]).includes(entry)
+      )
+    ),
     productLines: unique(
       (Array.isArray(filters.productLines) ? filters.productLines : [])
         .map((entry) => normalizeProductLine(entry))
@@ -122,9 +133,18 @@ export function matchesProductFilters(
   product: ProductFilterMatchable,
   filters: ProductFilterValues
 ): boolean {
+  const productLine = normalizeProductLine(product.productLine) ?? product.productLine;
+
+  if (
+    filters.categories.length > 0 &&
+    !filters.categories.includes(getCategoryForProductLine(productLine))
+  ) {
+    return false;
+  }
+
   if (
     filters.productLines.length > 0 &&
-    !filters.productLines.includes(normalizeProductLine(product.productLine) ?? product.productLine)
+    !filters.productLines.includes(productLine)
   ) {
     return false;
   }
@@ -163,7 +183,12 @@ export function matchesProductFilters(
 export function getProductFilterOptions(
   products: ProductFilterMatchable[]
 ): ProductFilterOptions {
+  const productLines = unique(products.map((product) => product.productLine));
+
   return {
+    categories: CATEGORIES.filter((category) =>
+      productLines.some((line) => getCategoryForProductLine(line) === category)
+    ),
     productLines: unique(products.map((product) => product.productLine)).sort(compareProductLines),
     chips: unique(
       products
