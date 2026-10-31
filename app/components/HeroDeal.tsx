@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react";
 import {
   formatScreenSize,
-  getProductLineLabel,
 } from "@/lib/product-catalog";
 import type { Product } from "@/lib/types";
 import { Badge } from "./Badge";
@@ -50,8 +49,8 @@ function HeroSlide({ pick }: { pick: HeroPick }) {
       </div>
       <div className="flex-1 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="chip">{product.chip}</Badge>
-          <Badge variant="line">{getProductLineLabel(product.productLine)}</Badge>
+          {product.chip && <Badge variant="chip">{product.chip}</Badge>}
+          <Badge variant="line">{product.productLineLabel}</Badge>
           {product.isNew && <Badge variant="new">Nouveau</Badge>}
         </div>
 
@@ -132,7 +131,7 @@ export function HeroDeal({ picks }: HeroDealProps) {
     pick,
     label: pick.label,
     color:
-      pick.product.productLine === "air"
+      pick.product.productLine !== "macbookpro"
         ? "bg-sky-500"
         : "bg-amber-500",
   }));
@@ -153,7 +152,7 @@ export function HeroDeal({ picks }: HeroDealProps) {
   }, []);
 
   const borderColor =
-    slide.pick.product.productLine === "air"
+    slide.pick.product.productLine !== "macbookpro"
       ? "border-sky-500/30"
       : "border-amber-500/30";
 
@@ -203,7 +202,7 @@ export function HeroDeal({ picks }: HeroDealProps) {
             className={`rounded-full transition-all ${
               i === current
                 ? `w-6 h-2 ${
-                    s.pick.product.productLine === "air"
+                    s.pick.product.productLine !== "macbookpro"
                       ? "bg-sky-500"
                       : "bg-amber-500"
                   }`

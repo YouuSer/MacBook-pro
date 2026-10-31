@@ -2,7 +2,6 @@
 
 import {
   formatScreenSize,
-  getProductLineLabel,
 } from "@/lib/product-catalog";
 import type { Product } from "@/lib/types";
 import { Badge } from "./Badge";
@@ -16,6 +15,9 @@ interface ProductCardProps {
   isTopDiscount?: boolean;
   isExpired?: boolean;
   onShowHistory?: (product: Product) => void;
+  canManageFavorite?: boolean;
+  favoriteBusy?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 const COLOR_MAP: Record<string, { hex: string; label: string; textDark?: boolean }> = {
@@ -26,7 +28,29 @@ const COLOR_MAP: Record<string, { hex: string; label: string; textDark?: boolean
   midnight: { hex: "#1f2937", label: "Minuit", textDark: false },
   midnightblue: { hex: "#1f2937", label: "Minuit", textDark: false },
   skyblue: { hex: "#c9e3f3", label: "Bleu ciel", textDark: true },
+  black: { hex: "#2b2b2d", label: "Noir", textDark: false },
+  white: { hex: "#f5f5f0", label: "Blanc", textDark: true },
+  pink: { hex: "#f4c6d4", label: "Rose", textDark: true },
+  teal: { hex: "#a8d5cf", label: "Bleu-vert", textDark: true },
+  ultramarine: { hex: "#5b6ee1", label: "Outremer", textDark: false },
+  blacktitanium: { hex: "#3c3c3d", label: "Titane noir", textDark: false },
+  whitetitanium: { hex: "#f0eeea", label: "Titane blanc", textDark: true },
+  naturaltitanium: { hex: "#bfb8ad", label: "Titane naturel", textDark: true },
+  deserttitanium: { hex: "#c7a98a", label: "Titane sable", textDark: true },
+  indigo: { hex: "#4b4f8a", label: "Indigo", textDark: false },
+  blush: { hex: "#f2d3cc", label: "Rose poudré", textDark: true },
+  blue: { hex: "#9fb8d6", label: "Bleu", textDark: true },
+  green: { hex: "#b9d3b0", label: "Vert", textDark: true },
+  yellow: { hex: "#f2e3a0", label: "Jaune", textDark: true },
+  purple: { hex: "#c8b8e0", label: "Mauve", textDark: true },
+  orange: { hex: "#f0b48a", label: "Orange", textDark: true },
+  citrus: { hex: "#e8e08a", label: "Citron", textDark: true },
 };
+
+export function getColorLabel(color: string) {
+  const key = color.trim().toLowerCase().replace(/[^a-z]/g, "");
+  return COLOR_MAP[key]?.label ?? color;
+}
 
 export function ProductCard({
   product,
@@ -37,15 +61,18 @@ export function ProductCard({
   isTopDiscount = false,
   isExpired = false,
   onShowHistory,
+  canManageFavorite = false,
+  favoriteBusy = false,
+  onToggleFavorite,
 }: ProductCardProps) {
   const discountPercent = Math.round(product.savingsPercent);
   const hasDiscount =
     discountPercent >= 1 && product.currentPrice < product.originalPrice;
   const screenLabel = formatScreenSize(product.screenSize);
   const savingsAmount = product.originalPrice - product.currentPrice;
-  const colorKey = product.color.trim().toLowerCase();
+  const colorKey = product.color.trim().toLowerCase().replace(/[^a-z]/g, "");
   const colorInfo = colorKey ? COLOR_MAP[colorKey] ?? null : null;
-  const isTopAir = topLabel && product.productLine === "air";
+  const isTopAir = topLabel && product.productLine !== "macbookpro";
   const topCardClasses = isTopAir
     ? "ring-2 ring-sky-500 border-sky-500/30"
     : "ring-2 ring-amber-500 border-amber-500/30";
@@ -127,6 +154,9 @@ export function ProductCard({
                 {product.isNew && (
                   <Badge variant="new">Nouveau</Badge>
                 )}
+                {product.isFavorite && (
+                  <Badge variant="favorite">Favori</Badge>
+                )}
                 {topLabel && (
                   <span className={`inline-flex items-center rounded-full px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white ${topTagClasses}`}>
                     {topLabel}
@@ -145,11 +175,43 @@ export function ProductCard({
               </>
             )}
           </div>
-          {!isExpired && hasDiscount && (
-            <div className="shrink-0">
-              <Badge variant="discount">-{discountPercent}%</Badge>
-            </div>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {canManageFavorite && onToggleFavorite && (
+              <button
+                type="button"
+                onClick={onToggleFavorite}
+                disabled={favoriteBusy}
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur ${
+                  product.isFavorite
+                    ? "border-amber-500/25 bg-amber-500/12 text-amber-500"
+                    : "border-black/10 bg-white/70 text-[var(--text-secondary)] dark:border-white/10 dark:bg-black/25"
+                } transition-colors hover:text-amber-500 disabled:cursor-wait disabled:opacity-60`}
+                aria-label={
+                  product.isFavorite
+                    ? "Retirer des favoris"
+                    : "Ajouter aux favoris"
+                }
+                title={
+                  product.isFavorite
+                    ? "Retirer des favoris"
+                    : "Ajouter aux favoris"
+                }
+              >
+                {favoriteBusy ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill={product.isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                  </svg>
+                )}
+              </button>
+            )}
+            {!isExpired && hasDiscount && (
+              <div className="shrink-0">
+                <Badge variant="discount">-{discountPercent}%</Badge>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -157,8 +219,8 @@ export function ProductCard({
       <div className="flex-1 p-3 sm:p-5 space-y-2.5 sm:space-y-3 min-w-0">
         {/* Specs badges */}
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="chip">{product.chip || "—"}</Badge>
-          <Badge variant="line">{getProductLineLabel(product.productLine)}</Badge>
+          {product.chip && <Badge variant="chip">{product.chip}</Badge>}
+          <Badge variant="line">{product.productLineLabel}</Badge>
           {colorInfo && (
             <span
               className={`inline-flex items-center px-2.5 py-[5px] rounded-full text-[11px] leading-none font-semibold border border-transparent ${

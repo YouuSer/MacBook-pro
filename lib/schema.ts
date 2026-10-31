@@ -7,7 +7,9 @@ export const products = sqliteTable("products", {
   originalPrice: real("original_price").notNull(),
   savingsPercent: real("savings_percent").notNull(),
   savings: text("savings"),
+  category: text("category"),
   productLine: text("product_line"),
+  productLineLabel: text("product_line_label"),
   chip: text("chip"),
   screenSize: text("screen_size"),
   memory: text("memory"),
@@ -68,3 +70,45 @@ export const alertDeliveries = sqliteTable("alert_deliveries", {
   scrapedAt: text("scraped_at").notNull(),
   createdAt: text("created_at").notNull(),
 });
+
+export const favoriteConfigs = sqliteTable("favorite_configs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  configKey: text("config_key").notNull().unique(),
+  label: text("label").notNull(),
+  sourcePartNumber: text("source_part_number").notNull(),
+  currentState: text("current_state").notNull(),
+  bestCurrentPrice: real("best_current_price"),
+  lastMatchedAt: text("last_matched_at"),
+  lastEventAt: text("last_event_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const favoriteEvents = sqliteTable("favorite_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  favoriteId: integer("favorite_id")
+    .notNull()
+    .references(() => favoriteConfigs.id),
+  eventType: text("event_type").notNull(),
+  partNumber: text("part_number").notNull(),
+  productTitle: text("product_title").notNull(),
+  currentPrice: real("current_price"),
+  previousPrice: real("previous_price"),
+  deliveryStatus: text("delivery_status"),
+  deliveryError: text("delivery_error"),
+  deliveredAt: text("delivered_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const favoriteNotificationSettings = sqliteTable(
+  "favorite_notification_settings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
+    channelType: text("channel_type").notNull(),
+    webhookUrl: text("webhook_url").notNull(),
+    triggersJson: text("triggers_json").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  }
+);

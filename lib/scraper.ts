@@ -1,14 +1,14 @@
-import type { ProductLine } from "./product-catalog";
+import type { Category, ProductLine } from "./product-catalog";
 import {
+  CATEGORY_DEFINITIONS,
   getProductLineFromTitle,
-  isTrackedMacbookTitle,
   normalizeAppleText,
+  normalizeProductLine,
   parseChip,
 } from "./product-catalog";
 import type { AppleRefurbBootstrap, AppleRefurbTile } from "./types";
 
-const REFURB_URL =
-  "https://www.apple.com/fr/shop/refurbished/mac";
+const REFURB_BASE_URL = "https://www.apple.com/fr/shop/refurbished";
 
 function getImageUrl(tile: AppleRefurbTile): string {
   const jpeg = tile.image.sources.find((s) => s.type === "image/jpeg");
@@ -22,7 +22,9 @@ export interface ScrapedProduct {
   originalPrice: number;
   savingsPercent: number;
   savings: string;
+  category: Category;
   productLine: ProductLine;
+  productLineLabel: string;
   chip: string;
   screenSize: string;
   memory: string;
@@ -33,25 +35,14 @@ export interface ScrapedProduct {
   imageUrl: string;
 }
 
-export async function scrapeAppleRefurb(): Promise<{
+export interface CategoryScrapeResult {
+  category: Category;
   products: ScrapedProduct[];
   totalFound: number;
-}> {
-  const res = await fetch(REFURB_URL, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      "Accept-Language": "fr-FR,fr;q=0.9",
-    },
-  });
+  error: string | null;
+}
 
-  if (!res.ok) {
-    throw new Error(`Apple returned ${res.status}: ${res.statusText}`);
-  }
-
-  const html = await res.text();
-
-  // Extract the REFURB_GRID_BOOTSTRAP JSON
+export function extractBootstrap(html: string): AppleRefurbBootstrap {
   const marker = "window.REFURB_GRID_BOOTSTRAP";
   const startIdx = html.indexOf(marker);
   if (startIdx === -1) {
@@ -88,17 +79,28 @@ export async function scrapeAppleRefurb(): Promise<{
     }
   }
 
-  const data: AppleRefurbBootstrap = JSON.parse(html.slice(jsonStart, jsonEnd));
-  const totalFound = data.tiles.length;
+  return JSON.parse(html.slice(jsonStart, jsonEnd));
+}
 
-  const trackedTiles = data.tiles.filter((tile) => isTrackedMacbookTitle(tile.title));
+export function parseBootstrapTiles(
+  category: Category,
+  data: AppleRefurbBootstrap
+): ScrapedProduct[] {
+  const modelLabels = {
+    ...data.dictionaries?.dimensions?.refurbClearModel,
+    ...data.dictionaries?.dimensions?.heroAirPods,
+  };
 
-  const products: ScrapedProduct[] = trackedTiles.flatMap((tile) => {
+  return (data.tiles ?? []).flatMap((tile) => {
     const normalizedTitle = normalizeAppleText(tile.title);
-    const productLine = getProductLineFromTitle(normalizedTitle);
-    const chip = parseChip(normalizedTitle);
+    const dims = tile.filters.dimensions;
+    const modelKey = dims.refurbClearModel ?? dims.heroAirPods;
+    // Les clés génériques ("macbookair") sont fiables ; pour AirPods on préfère le titre
+    // car la clé Apple ("airpodspro2023") encode l'année et non la génération.
+    const productLine =
+      getProductLineFromTitle(normalizedTitle) ?? normalizeProductLine(modelKey);
 
-    if (!productLine || !chip) {
+    if (!productLine) {
       return [];
     }
 
@@ -108,17 +110,21 @@ export async function scrapeAppleRefurb(): Promise<{
       (tile.price.previousPrice?.raw_amount
         ? parseFloat(tile.price.previousPrice.raw_amount)
         : currentPrice);
-    const dims = tile.filters.dimensions;
 
     return [{
       partNumber: tile.partNumber,
       title: normalizedTitle,
       currentPrice,
       originalPrice,
-      savingsPercent: ((originalPrice - currentPrice) / originalPrice) * 100,
+      savingsPercent: originalPrice > 0 ? ((originalPrice - currentPrice) / originalPrice) * 100 : 0,
       savings: tile.price.savings,
+      category,
       productLine,
-      chip,
+      productLineLabel:
+        (modelKey && modelLabels[modelKey]?.text && productLine === normalizeProductLine(modelKey)
+          ? modelLabels[modelKey].text
+          : "") || "",
+      chip: parseChip(normalizedTitle) ?? "",
       screenSize: dims.dimensionScreensize ?? "",
       memory: dims.tsMemorySize ?? "",
       storage: dims.dimensionCapacity ?? "",
@@ -128,6 +134,55 @@ export async function scrapeAppleRefurb(): Promise<{
       imageUrl: getImageUrl(tile),
     }];
   });
+}
 
-  return { products, totalFound };
+async function scrapeCategory(category: Category, path: string): Promise<CategoryScrapeResult> {
+  try {
+    const res = await fetch(`${REFURB_BASE_URL}/${path}`, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Accept-Language": "fr-FR,fr;q=0.9",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Apple returned ${res.status}: ${res.statusText}`);
+    }
+
+    const data = extractBootstrap(await res.text());
+    const products = parseBootstrapTiles(category, data);
+
+    return { category, products, totalFound: data.tiles?.length ?? 0, error: null };
+  } catch (error) {
+    return {
+      category,
+      products: [],
+      totalFound: 0,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export async function scrapeAppleRefurb(): Promise<{
+  products: ScrapedProduct[];
+  totalFound: number;
+  failedCategories: Array<{ category: Category; error: string }>;
+}> {
+  const results = await Promise.all(
+    CATEGORY_DEFINITIONS.map((definition) => scrapeCategory(definition.id, definition.path))
+  );
+  const failedCategories = results.flatMap((result) =>
+    result.error ? [{ category: result.category, error: result.error }] : []
+  );
+
+  if (failedCategories.length === results.length) {
+    throw new Error(failedCategories.map((f) => `${f.category}: ${f.error}`).join(" | "));
+  }
+
+  return {
+    products: results.flatMap((result) => result.products),
+    totalFound: results.reduce((sum, result) => sum + result.totalFound, 0),
+    failedCategories,
+  };
 }

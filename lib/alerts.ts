@@ -1,4 +1,4 @@
-import { type ProductLine } from "./product-catalog";
+import { getProductLineLabel, type ProductLine } from "./product-catalog";
 import {
   createEmptyProductFilters,
   matchesProductFilters,
@@ -476,5 +476,5 @@ export function buildAlertWebhookRequest(
 }
 
 export function getProductLineLabelForAlert(productLine: ProductLine) {
-  return productLine === "air" ? "Air" : "Pro";
+  return getProductLineLabel(productLine);
 }

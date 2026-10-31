@@ -1,12 +1,19 @@
-import type { ProductLine } from "./product-catalog";
+import type { Category, ProductLine } from "./product-catalog";
 
 export type PriceTrend = "up" | "down";
+export type FavoriteState = "available" | "unavailable";
+export type FavoriteEventType = "reappearance" | "expiration" | "price_drop";
+export type FavoriteDeliveryStatus = "success" | "error";
+export type FavoriteNotificationChannelType = "discord" | "slack";
 
 // Types pour les données brutes Apple Refurb
 
 export interface AppleRefurbBootstrap {
-  tiles: AppleRefurbTile[];
-  dimensions: AppleRefurbDimension[];
+  tiles: AppleRefurbTile[] | null;
+  dimensions: AppleRefurbDimension[] | null;
+  dictionaries?: {
+    dimensions?: Record<string, Record<string, { sortOrder: number; text: string }>>;
+  };
 }
 
 export interface AppleRefurbDimension {
@@ -53,6 +60,7 @@ export interface AppleRefurbTile {
     dimensions: {
       dimensionCapacity?: string;
       refurbClearModel?: string;
+      heroAirPods?: string;
       dimensionRelYear?: string;
       dimensionColor?: string;
       tsMemorySize?: string;
@@ -75,7 +83,9 @@ export interface Product {
   originalPrice: number;
   savingsPercent: number;
   savings: string;
+  category: Category;
   productLine: ProductLine;
+  productLineLabel: string;
   chip: string;
   cpuCores: string;
   gpuCores: string;
@@ -89,10 +99,67 @@ export interface Product {
   firstSeen: string;
   lastSeen: string;
   isNew: boolean;
+  isFavorite: boolean;
+  favoriteId: number | null;
 }
 
 export interface PriceHistoryEntry {
   price: number;
   firstSeenAt: string;
   lastSeenAt: string;
+}
+
+export interface FavoriteConfig {
+  id: number;
+  configKey: string;
+  label: string;
+  sourcePartNumber: string;
+  currentState: FavoriteState;
+  bestCurrentPrice: number | null;
+  lastMatchedAt: string | null;
+  lastEventAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  currentPartNumber: string | null;
+  productUrl: string | null;
+  imageUrl: string | null;
+  currentMatchCount: number;
+}
+
+export interface FavoriteEvent {
+  id: number;
+  favoriteId: number;
+  eventType: FavoriteEventType;
+  partNumber: string;
+  productTitle: string;
+  currentPrice: number | null;
+  previousPrice: number | null;
+  createdAt: string;
+  deliveryStatus: FavoriteDeliveryStatus | null;
+  deliveryError: string | null;
+  deliveredAt: string | null;
+}
+
+export interface FavoriteNotificationSettings {
+  id: number;
+  enabled: boolean;
+  channelType: FavoriteNotificationChannelType;
+  webhookUrl: string;
+  triggers: FavoriteEventType[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FavoriteAppearancePeriod {
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
+export interface FavoriteDetail {
+  favorite: FavoriteConfig;
+  currentMatches: Product[];
+  previousMatches: Product[];
+  appearances: FavoriteAppearancePeriod[];
+  priceHistory: PriceHistoryEntry[];
+  events: FavoriteEvent[];
 }

@@ -1,5 +1,5 @@
 interface BadgeProps {
-  variant: "new" | "discount" | "chip" | "line";
+  variant: "new" | "discount" | "chip" | "line" | "favorite";
   children: React.ReactNode;
 }
 
@@ -8,6 +8,7 @@ const styles: Record<BadgeProps["variant"], string> = {
   discount: "bg-emerald-500 text-white border-transparent dark:bg-emerald-400",
   chip: "bg-[var(--surface-secondary)] text-[var(--fg)] border-[var(--border)]",
   line: "bg-[var(--accent-blue)]/10 text-[var(--accent-blue)] border-[var(--accent-blue)]/20",
+  favorite: "bg-amber-500/12 text-amber-600 border-amber-500/20 dark:text-amber-300",
 };
 
 export function Badge({ variant, children }: BadgeProps) {

@@ -1,10 +1,59 @@
-export type ProductLine = "air" | "pro";
+export const CATEGORIES = ["mac", "iphone", "airpods", "appletv", "homepod"] as const;
+export type Category = (typeof CATEGORIES)[number];
 
-const CHIP_GENERATIONS = ["1", "2", "3", "4", "5"] as const;
+// Clé de famille Apple (refurbClearModel), ex. "macbookair", "macmini", "iphone16pro".
+export type ProductLine = string;
 
-const CHIP_REGEX = /\b(M[1-5])(?:\s+(Pro|Max|Ultra))?\b/i;
-const STANDARD_CHIP_REGEX = /^M[1-5]$/;
-const PRO_CHIP_REGEX = /^M[1-5] Pro$/;
+export type FilterKey = "productLines" | "chips" | "memories" | "storages" | "screenSizes" | "colors";
+
+export interface CategoryDefinition {
+  id: Category;
+  label: string;
+  path: string;
+  filters: FilterKey[];
+}
+
+export const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
+  { id: "mac", label: "Mac", path: "mac", filters: ["productLines", "chips", "memories", "storages", "screenSizes"] },
+  { id: "iphone", label: "iPhone", path: "iphone", filters: ["productLines", "storages", "colors"] },
+  { id: "airpods", label: "AirPods", path: "airpods", filters: ["productLines", "colors"] },
+  { id: "appletv", label: "Apple TV", path: "appletv", filters: ["productLines", "storages"] },
+  { id: "homepod", label: "HomePod", path: "homepod", filters: ["productLines", "colors"] },
+];
+
+const LEGACY_PRODUCT_LINES: Record<string, ProductLine> = {
+  air: "macbookair",
+  pro: "macbookpro",
+};
+
+const FAMILY_LABELS: Record<string, string> = {
+  macbookneo: "MacBook Neo",
+  macbookair: "MacBook Air",
+  macbookpro: "MacBook Pro",
+  imac: "iMac",
+  macmini: "Mac mini",
+  macstudio: "Mac Studio",
+  macpro: "Mac Pro",
+  display: "Écrans",
+  appletv: "Apple TV HD",
+  appletv4k: "Apple TV 4K",
+  homepod: "HomePod",
+  homepodmini: "HomePod mini",
+};
+
+// Ordre d'affichage des familles Mac, calqué sur Apple.
+const FAMILY_ORDER = [
+  "macbookneo",
+  "macbookair",
+  "macbookpro",
+  "imac",
+  "macmini",
+  "macstudio",
+  "macpro",
+  "display",
+];
+
+const CHIP_REGEX = /\b([MA]\d{1,2})(?:\s+(Pro|Max|Ultra|Bionic))?\b/i;
 const CORE_WORD_REGEX = "c(?:oe|œ)urs?";
 const CPU_CORES_REGEX = new RegExp(`\\bCPU\\s+(\\d+)\\s+${CORE_WORD_REGEX}\\b`, "i");
 const GPU_CORES_REGEX = new RegExp(`\\bGPU\\s+(\\d+)\\s+${CORE_WORD_REGEX}\\b`, "i");
@@ -15,11 +64,6 @@ const SCREEN_SIZE_LABELS: Record<string, string> = {
   "15": '15"',
   "16": '16"',
 };
-
-export const SUPPORTED_ADMIN_CHIP_OPTIONS = CHIP_GENERATIONS.flatMap((generation) => [
-  `M${generation}`,
-  `M${generation} PRO`,
-]);
 
 export function normalizeAppleText(value: string): string {
   return value.replace(/[\u00a0\u202f]/g, " ").replace(/\s+/g, " ").trim();
@@ -64,25 +108,36 @@ export function normalizeProductLine(
     return null;
   }
 
-  const normalized = value.trim().toLowerCase();
+  const normalized = value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
-  if (normalized === "air" || normalized === "pro") {
-    return normalized;
+  if (!normalized) {
+    return null;
   }
 
-  return null;
+  return LEGACY_PRODUCT_LINES[normalized] ?? normalized;
 }
 
 export function getProductLineFromTitle(title: string): ProductLine | null {
-  const normalized = normalizeAppleText(title);
+  const normalized = normalizeAppleText(title).toLowerCase();
 
-  if (/macbook air/i.test(normalized)) {
-    return "air";
-  }
+  if (/macbook neo/.test(normalized)) return "macbookneo";
+  if (/macbook air/.test(normalized)) return "macbookair";
+  if (/macbook pro/.test(normalized)) return "macbookpro";
+  if (/\bimac\b/.test(normalized)) return "imac";
+  if (/mac mini/.test(normalized)) return "macmini";
+  if (/mac studio/.test(normalized)) return "macstudio";
+  if (/mac pro/.test(normalized)) return "macpro";
+  if (/display|écran/.test(normalized)) return "display";
+  if (/homepod mini/.test(normalized)) return "homepodmini";
+  if (/homepod/.test(normalized)) return "homepod";
+  if (/apple tv 4k/.test(normalized)) return "appletv4k";
+  if (/apple tv/.test(normalized)) return "appletv";
 
-  if (/macbook pro/i.test(normalized)) {
-    return "pro";
-  }
+  const iphone = normalized.match(/iphone\s+(\d+e?)(?:\s+(pro max|pro|plus|mini))?/);
+  if (iphone) return `iphone${iphone[1]}${(iphone[2] ?? "").replace(/\s+/g, "")}`;
+
+  const airpods = normalized.match(/airpods(?:\s+(pro|max))?(?:\s+(\d))?/);
+  if (airpods) return `airpods${airpods[1] ?? ""}${airpods[2] ?? ""}`;
 
   return null;
 }
@@ -94,8 +149,61 @@ export function resolveProductLine(
   return normalizeProductLine(value) ?? getProductLineFromTitle(title);
 }
 
-export function getProductLineLabel(productLine: ProductLine): string {
-  return productLine === "air" ? "Air" : "Pro";
+export function getCategoryForProductLine(productLine: ProductLine): Category {
+  if (productLine.startsWith("iphone")) return "iphone";
+  if (productLine.startsWith("airpods")) return "airpods";
+  if (productLine.startsWith("appletv")) return "appletv";
+  if (productLine.startsWith("homepod")) return "homepod";
+  return "mac";
+}
+
+export function resolveCategory(
+  value: string | null | undefined,
+  productLine: ProductLine
+): Category {
+  return (CATEGORIES as readonly string[]).includes(value ?? "")
+    ? (value as Category)
+    : getCategoryForProductLine(productLine);
+}
+
+export function getCategoryDefinition(category: Category): CategoryDefinition {
+  return CATEGORY_DEFINITIONS.find((definition) => definition.id === category)!;
+}
+
+export function getProductLineLabel(productLine: ProductLine, fallback?: string | null): string {
+  if (FAMILY_LABELS[productLine]) {
+    return FAMILY_LABELS[productLine];
+  }
+
+  if (fallback) {
+    return fallback;
+  }
+
+  const iphone = productLine.match(/^iphone(\d+e?)(promax|pro|plus|mini)?$/);
+  if (iphone) {
+    const tier = { promax: " Pro Max", pro: " Pro", plus: " Plus", mini: " mini" }[iphone[2] ?? ""] ?? "";
+    return `iPhone ${iphone[1]}${tier}`;
+  }
+
+  const airpods = productLine.match(/^airpods(pro|max)?(\d{1,2})?/);
+  if (airpods) {
+    return ["AirPods", airpods[1] === "pro" ? "Pro" : airpods[1] === "max" ? "Max" : "", airpods[2] ?? ""]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return productLine;
+}
+
+export function compareProductLines(a: ProductLine, b: ProductLine): number {
+  const aIndex = FAMILY_ORDER.indexOf(a);
+  const bIndex = FAMILY_ORDER.indexOf(b);
+
+  if (aIndex !== -1 || bIndex !== -1) {
+    return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
+  }
+
+  return getProductLineLabel(a).localeCompare(getProductLineLabel(b), "fr", { numeric: true });
 }
 
 export function normalizeScreenSize(value: string): string {
@@ -111,19 +219,4 @@ export function formatScreenSize(value: string): string | null {
   }
 
   return SCREEN_SIZE_LABELS[normalized] ?? `${normalized}"`;
-}
-
-export function isTrackedMacbookTitle(title: string): boolean {
-  const productLine = getProductLineFromTitle(title);
-  const chip = parseChip(title);
-
-  if (!productLine || !chip) {
-    return false;
-  }
-
-  if (productLine === "air") {
-    return STANDARD_CHIP_REGEX.test(chip);
-  }
-
-  return STANDARD_CHIP_REGEX.test(chip) || PRO_CHIP_REGEX.test(chip);
 }

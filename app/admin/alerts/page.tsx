@@ -2,6 +2,7 @@ import Link from "next/link";
 import { hasAdminSession, isAdminTokenConfigured } from "@/lib/admin-auth";
 import { AlertLoginForm } from "./AlertLoginForm";
 import { AdminAlertsClient } from "./AdminAlertsClient";
+import { AdminFavoritesClient } from "./AdminFavoritesClient";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +36,11 @@ export default async function AdminAlertsPage() {
             Admin
           </p>
           <h1 className="mt-2 text-3xl font-semibold text-[var(--fg)]">
-            Alertes webhook
+            Alertes et favoris
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-[var(--text-secondary)]">
-            Créez des règles Discord ou Slack pour être notifié lors d&apos;une
-            nouvelle disponibilité ou d&apos;une baisse de prix sur les MacBook
-            surveillés.
+            Gérez les règles webhook génériques, les favoris de configuration et
+            leurs notifications dédiées.
           </p>
         </div>
       </div>
@@ -56,7 +56,10 @@ export default async function AdminAlertsPage() {
           </p>
         </div>
       ) : authenticated ? (
-        <AdminAlertsClient />
+        <div className="space-y-8">
+          <AdminAlertsClient />
+          <AdminFavoritesClient />
+        </div>
       ) : (
         <AlertLoginForm />
       )}

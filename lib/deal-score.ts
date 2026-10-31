@@ -1,5 +1,4 @@
 import { getAppleDeviceProfile } from "./apple-device-profiles";
-import { getProductLineLabel } from "./product-catalog";
 import type { Product } from "./types";
 
 const CHIP_SCORES: Record<string, number> = {
@@ -151,7 +150,7 @@ function getReasons(
   if (product.savingsPercent >= 20) {
     pushReason(reasons, `${Math.round(product.savingsPercent)}% sous le neuf`);
   } else if (priceInLineScore >= 100) {
-    pushReason(reasons, `prix bas pour un ${getProductLineLabel(product.productLine)}`);
+    pushReason(reasons, `prix bas pour un ${product.productLineLabel}`);
   }
 
   if (profile.externalDisplaysScore >= 100) {

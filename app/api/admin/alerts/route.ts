@@ -8,7 +8,7 @@ import {
 } from "@/lib/alerts";
 import { getDb } from "@/lib/db";
 import { getProductFilterOptions } from "@/lib/product-filters";
-import { SUPPORTED_ADMIN_CHIP_OPTIONS } from "@/lib/product-catalog";
+import { resolveProductLine } from "@/lib/product-catalog";
 import { alertDeliveries, alertRules, products } from "@/lib/schema";
 import { toApiError } from "@/lib/api-error";
 
@@ -47,6 +47,7 @@ export async function GET() {
       db.select().from(alertRules).orderBy(desc(alertRules.updatedAt)),
       db
         .select({
+          title: products.title,
           productLine: products.productLine,
           chip: products.chip,
           memory: products.memory,
@@ -63,37 +64,21 @@ export async function GET() {
 
     const rules = ruleRows.map((row) => parseAlertRuleRow(row));
     const ruleNameById = new Map(rules.map((rule) => [rule.id, rule.name]));
-    const baseOptions = getProductFilterOptions(
-      productRows
-        .filter(
-          (
-            row
-          ): row is {
-            productLine: "air" | "pro";
-            chip: string | null;
-            memory: string | null;
-            storage: string | null;
-            screenSize: string | null;
-          } => row.productLine === "air" || row.productLine === "pro"
-        )
-        .map((row) => ({
-          productLine: row.productLine,
-          chip: row.chip ?? "",
-          memory: row.memory ?? "",
-          storage: row.storage ?? "",
-          screenSize: row.screenSize ?? "",
-        }))
-    );
+    const options = getProductFilterOptions(
+      productRows.flatMap((row) => {
+        const productLine = resolveProductLine(row.productLine, row.title);
 
-    const options = {
-      ...baseOptions,
-      chips: [
-        ...SUPPORTED_ADMIN_CHIP_OPTIONS,
-        ...baseOptions.chips.filter(
-          (chip) => !SUPPORTED_ADMIN_CHIP_OPTIONS.includes(chip)
-        ),
-      ],
-    };
+        return productLine
+          ? [{
+              productLine,
+              chip: row.chip ?? "",
+              memory: row.memory ?? "",
+              storage: row.storage ?? "",
+              screenSize: row.screenSize ?? "",
+            }]
+          : [];
+      })
+    );
 
     return NextResponse.json({
       rules,

@@ -3,6 +3,7 @@ import type { Product } from "./types";
 
 export type AppleDeviceProfileId =
   | "air"
+  | "desktop"
   | "pro_13_legacy"
   | "pro_14_16_standard"
   | "pro_14_16_pro";
@@ -22,6 +23,13 @@ const APPLE_DEVICE_PROFILES: Record<AppleDeviceProfileId, AppleDeviceProfile> = 
     externalDisplaysScore: 25,
     portsScore: 20,
     longevityScore: 40,
+  },
+  desktop: {
+    id: "desktop",
+    activeCoolingScore: 100,
+    externalDisplaysScore: 70,
+    portsScore: 80,
+    longevityScore: 75,
   },
   pro_13_legacy: {
     id: "pro_13_legacy",
@@ -47,7 +55,11 @@ const APPLE_DEVICE_PROFILES: Record<AppleDeviceProfileId, AppleDeviceProfile> = 
 };
 
 export function getAppleDeviceProfile(product: Product): AppleDeviceProfile {
-  if (product.productLine === "air") {
+  if (["imac", "macmini", "macstudio", "macpro"].includes(product.productLine)) {
+    return APPLE_DEVICE_PROFILES.desktop;
+  }
+
+  if (product.productLine !== "macbookpro") {
     return APPLE_DEVICE_PROFILES.air;
   }
 

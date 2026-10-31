@@ -1,4 +1,5 @@
 import {
+  compareProductLines,
   normalizeProductLine,
   normalizeScreenSize,
   type ProductLine,
@@ -123,7 +124,7 @@ export function matchesProductFilters(
 ): boolean {
   if (
     filters.productLines.length > 0 &&
-    !filters.productLines.includes(product.productLine)
+    !filters.productLines.includes(normalizeProductLine(product.productLine) ?? product.productLine)
   ) {
     return false;
   }
@@ -163,7 +164,7 @@ export function getProductFilterOptions(
   products: ProductFilterMatchable[]
 ): ProductFilterOptions {
   return {
-    productLines: unique(products.map((product) => product.productLine)).sort(),
+    productLines: unique(products.map((product) => product.productLine)).sort(compareProductLines),
     chips: unique(
       products
         .map((product) => normalizeFilterTextValue(product.chip))
