@@ -220,3 +220,25 @@ describe("catalog view", () => {
     });
   });
 });
+
+describe("product display", () => {
+  it("builds Apple-style short titles and spec lines", async () => {
+    const { getShortTitle, getSpecLine } = await import("../lib/product-display");
+    const mac = makeProduct({ chip: "M4 Pro", cpuCores: "12", gpuCores: "16", memory: "24gb", color: "spaceblack" });
+    const iphone = makeProduct({
+      category: "iphone",
+      productLine: "iphone16pro",
+      productLineLabel: "iPhone 16 Pro",
+      chip: "",
+      screenSize: "",
+      memory: "",
+      storage: "256gb",
+      color: "deserttitanium",
+    });
+
+    expect(getShortTitle(mac)).toBe('MacBook Pro 14" M4 Pro');
+    expect(getSpecLine(mac)).toBe("CPU 12 · GPU 16 · 24 Go · 512 Go · Noir sidéral");
+    expect(getShortTitle(iphone)).toBe("iPhone 16 Pro");
+    expect(getSpecLine(iphone)).toBe("256 Go · Titane sable");
+  });
+});

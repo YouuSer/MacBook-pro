@@ -12,7 +12,7 @@ export function CategoryNav({ active, counts, onSelect }: CategoryNavProps) {
   return (
     <nav
       aria-label="Catégories"
-      className="sticky top-14 z-40 -mx-4 mb-6 flex gap-1.5 overflow-x-auto border-b border-[var(--border)]/50 bg-[var(--bg)]/85 px-4 py-3 backdrop-blur-xl"
+      className="-mx-1 flex min-w-0 flex-1 gap-1 overflow-x-auto px-1"
     >
       {CATEGORY_DEFINITIONS.map((definition) => {
         const isActive = active === definition.id;
@@ -23,10 +23,10 @@ export function CategoryNav({ active, counts, onSelect }: CategoryNavProps) {
             type="button"
             onClick={() => onSelect(definition.id)}
             aria-pressed={isActive}
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] transition-colors ${
               isActive
                 ? "bg-[var(--fg)] text-[var(--bg)]"
-                : "text-[var(--fg)] hover:bg-[var(--surface)]"
+                : "text-[var(--fg)] hover:bg-[var(--surface-secondary)]"
             }`}
           >
             {definition.label}

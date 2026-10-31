@@ -135,8 +135,8 @@ function getReasons(
     pushReason(reasons, `${formatCapacityLabel(product.memory)} pour dev`);
   }
 
-  if (/\bPro$/i.test(product.chip)) {
-    pushReason(reasons, "puce Pro");
+  if (/^M\d+ (Pro|Max)$/i.test(product.chip)) {
+    pushReason(reasons, `puce ${product.chip}`);
   } else if (/^M[45]$/i.test(product.chip)) {
     pushReason(reasons, `puce ${product.chip} récente`);
   }

@@ -27,7 +27,7 @@ export function FamilySection({ group, expandExpired, renderCard }: FamilySectio
       </div>
 
       {group.available.length > 0 && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
           {group.available.map((product) => renderCard(product, false))}
         </div>
       )}
@@ -44,7 +44,7 @@ export function FamilySection({ group, expandExpired, renderCard }: FamilySectio
             </span>{" "}
             Offres expirées ({group.expired.length})
           </summary>
-          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
             {group.expired.map((product) => renderCard(product, true))}
           </div>
         </details>

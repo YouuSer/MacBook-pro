@@ -8,7 +8,8 @@ const HEIGHT = 28;
 
 export function PriceSparkline({ prices, muted = false }: PriceSparklineProps) {
   if (prices.length < 2) {
-    return null;
+    // Garde la hauteur pour que les cartes d'une même rangée restent alignées.
+    return <div style={{ height: HEIGHT }} aria-hidden />;
   }
 
   const min = Math.min(...prices);

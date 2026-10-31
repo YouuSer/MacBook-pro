@@ -14,14 +14,14 @@ export function CatalogStats({ stats, categoryLabel }: CatalogStatsProps) {
   ];
 
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
+    <dl className="grid h-full grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
       {items.map((item) => (
         <div
           key={item.label}
-          className="flex flex-col gap-1 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 shadow-[var(--shadow-sm)]"
+          className="flex flex-col-reverse justify-center gap-1 rounded-[18px] bg-[var(--surface)] p-[18px]"
         >
-          <dd className="text-2xl font-semibold tabular-nums">{item.value}</dd>
           <dt className="text-xs text-[var(--text-secondary)]">{item.label}</dt>
+          <dd className="text-[26px] font-semibold leading-none tabular-nums">{item.value}</dd>
         </div>
       ))}
     </dl>

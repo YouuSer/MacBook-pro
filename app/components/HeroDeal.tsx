@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
-  formatScreenSize,
-} from "@/lib/product-catalog";
+  formatPrice,
+  getShortTitle,
+  getSpecLine,
+} from "@/lib/product-display";
 import type { Product } from "@/lib/types";
-import { Badge } from "./Badge";
 
 export interface HeroPick {
   product: Product;
@@ -14,204 +15,112 @@ export interface HeroPick {
   label: string;
 }
 
-interface SlideConfig {
-  pick: HeroPick;
-  label: string;
-  color: string;
-}
-
 interface HeroDealProps {
   picks: HeroPick[];
+  categoryLabel: string;
+  onOpen?: (product: Product) => void;
 }
 
-function HeroSlide({ pick }: { pick: HeroPick }) {
-  const { product, score, reasons } = pick;
+export function HeroDeal({ picks, categoryLabel, onOpen }: HeroDealProps) {
+  const [current, setCurrent] = useState(0);
+
+  if (picks.length === 0) {
+    return null;
+  }
+
+  const { product, reasons } = picks[current % picks.length];
   const discountPercent = Math.round(product.savingsPercent);
-  const savingsAmount = product.originalPrice - product.currentPrice;
-  const screenLabel = formatScreenSize(product.screenSize);
-  const specItems = [
-    screenLabel,
-    product.memory ? product.memory.toUpperCase() : null,
-    product.storage ? product.storage.toUpperCase() : null,
-    product.releaseYear || null,
-  ].filter((item): item is string => Boolean(item));
+  const hasDiscount = discountPercent >= 1 && product.currentPrice < product.originalPrice;
+  const go = (delta: number) =>
+    setCurrent((index) => (index + delta + picks.length) % picks.length);
 
   return (
-    <div className="flex flex-col sm:flex-row gap-6 p-5">
-      <div className="flex items-center justify-center sm:w-48 shrink-0">
-        <img
-          src={product.imageUrl}
-          alt={product.title}
-          width={180}
-          height={180}
-          className="h-36 sm:h-44 object-contain"
-        />
+    <section
+      aria-roledescription="carrousel"
+      aria-label="Meilleures affaires"
+      className="flex h-full flex-col gap-6 rounded-[22px] bg-[var(--surface)] p-6 sm:flex-row sm:items-center sm:gap-7 sm:p-7"
+    >
+      <div className="flex h-36 w-full shrink-0 items-center justify-center rounded-2xl bg-[var(--image-tile)] sm:w-52">
+        <img src={product.imageUrl} alt="" className="h-28 max-w-[85%] object-contain mix-blend-multiply" />
       </div>
-      <div className="flex-1 space-y-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          {product.chip && <Badge variant="chip">{product.chip}</Badge>}
-          <Badge variant="line">{product.productLineLabel}</Badge>
-          {product.isNew && <Badge variant="new">Nouveau</Badge>}
+
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-semibold uppercase tracking-[0.6px] text-[var(--badge-top-fg)]">
+            Meilleure affaire · {product.productLineLabel || categoryLabel}
+          </span>
+          {picks.length > 1 && (
+            <div className="flex items-center gap-1 text-[var(--text-secondary)]">
+              <button
+                type="button"
+                onClick={() => go(-1)}
+                aria-label="Affaire précédente"
+                className="rounded-full p-1.5 hover:bg-[var(--surface-secondary)] hover:text-[var(--fg)]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+              <span className="text-xs tabular-nums" aria-live="polite">
+                {current + 1}/{picks.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => go(1)}
+                aria-label="Affaire suivante"
+                className="rounded-full p-1.5 hover:bg-[var(--surface-secondary)] hover:text-[var(--fg)]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
-        <h2 className="text-lg font-semibold leading-snug line-clamp-2">
-          {product.title}
+        <h2 className="text-[28px] font-semibold leading-tight tracking-[-0.5px]">
+          {onOpen ? (
+            <button type="button" onClick={() => onOpen(product)} className="text-left hover:underline" title={product.title}>
+              {getShortTitle(product)}
+            </button>
+          ) : (
+            getShortTitle(product)
+          )}
         </h2>
+        <p className="text-sm text-[var(--text-secondary)]">{getSpecLine(product)}</p>
+
+        <div className="mt-1 flex flex-wrap items-baseline gap-3">
+          <span className="text-3xl font-semibold tabular-nums">{formatPrice(product.currentPrice)}</span>
+          {hasDiscount && (
+            <>
+              <span className="text-[15px] text-[var(--text-secondary)] line-through">
+                {formatPrice(product.originalPrice)}
+              </span>
+              <span className="rounded-full bg-[var(--accent-blue)] px-2.5 py-0.5 text-[13px] font-semibold text-white">
+                −{discountPercent} %
+              </span>
+            </>
+          )}
+        </div>
 
         {reasons.length > 0 && (
-          <p className="text-sm text-[var(--text-secondary)]">
-            {reasons.join(" · ")}
-          </p>
+          <p className="text-[13px] text-[var(--text-secondary)]">{reasons.join(" · ")}</p>
         )}
 
-        <div className="flex items-center gap-3 flex-wrap">
-          {specItems.map((item, index) => (
-            <div key={item} className="flex items-center gap-3">
-              {index > 0 && (
-                <span className="text-[var(--border)]" aria-hidden>·</span>
-              )}
-              <span className="text-xs font-medium text-[var(--text-secondary)]">
-                {item}
-              </span>
-            </div>
-          ))}
-          {specItems.length > 0 && (
-            <>
-              <span className="text-[var(--border)]" aria-hidden>·</span>
-            </>
-          )}
-          <span
-            className="text-xs font-medium text-[var(--text-secondary)]"
-            title="Score développeur : adéquation dev plus opportunité de prix"
-          >
-            Score {score.toFixed(0)}
-          </span>
-        </div>
-
-        <div className="flex items-baseline gap-3">
-          <span className="text-2xl font-bold text-[var(--fg)]">
-            {product.currentPrice.toLocaleString("fr-FR")} €
-          </span>
-          {discountPercent > 0 && savingsAmount > 0 && (
-            <>
-              <span className="text-sm text-[var(--text-secondary)] line-through">
-                {product.originalPrice.toLocaleString("fr-FR")} €
-              </span>
-              <Badge variant="discount">-{discountPercent}%</Badge>
-            </>
-          )}
-        </div>
-
-        {discountPercent > 0 && savingsAmount > 0 && (
-          <p className="text-sm font-medium text-emerald-500 dark:text-emerald-400">
-            Économisez {savingsAmount.toLocaleString("fr-FR")} €
-          </p>
-        )}
-
-        <div className="pt-1">
+        <div className="mt-2">
           <a
             href={product.productUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-[#0071e3] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
+            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--accent-blue)] hover:underline"
           >
             Voir sur Apple
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 17L17 7M17 7H7M17 7V17" />
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+              <path d="M9 18l6-6-6-6" />
             </svg>
           </a>
         </div>
       </div>
-    </div>
-  );
-}
-
-export function HeroDeal({ picks }: HeroDealProps) {
-  const slides: SlideConfig[] = picks.map((pick) => ({
-    pick,
-    label: pick.label,
-    color:
-      pick.product.productLine !== "macbookpro"
-        ? "bg-sky-500"
-        : "bg-amber-500",
-  }));
-
-  if (slides.length === 0) {
-    return null;
-  }
-
-  const [current, setCurrent] = useState(0);
-  const slide = slides[current];
-
-  const prev = useCallback(() => {
-    setCurrent((c) => (c - 1 + slides.length) % slides.length);
-  }, []);
-
-  const next = useCallback(() => {
-    setCurrent((c) => (c + 1) % slides.length);
-  }, []);
-
-  const borderColor =
-    slide.pick.product.productLine !== "macbookpro"
-      ? "border-sky-500/30"
-      : "border-amber-500/30";
-
-  return (
-    <div className={`rounded-2xl border ${borderColor} bg-[var(--surface)] shadow-[var(--shadow-sm)] overflow-hidden`}>
-      {/* Header */}
-      <div className={`${slide.color} px-4 py-2 flex items-center justify-between transition-colors`}>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold text-white uppercase tracking-wider">
-            {slide.label}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={prev}
-            className="p-1 rounded-full hover:bg-white/20 transition-colors text-white"
-            aria-label="Précédent"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-          <span className="text-[11px] font-medium text-white/80">
-            {current + 1}/{slides.length}
-          </span>
-          <button
-            onClick={next}
-            className="p-1 rounded-full hover:bg-white/20 transition-colors text-white"
-            aria-label="Suivant"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Slide */}
-      <HeroSlide pick={slide.pick} />
-
-      {/* Dots */}
-      <div className="flex items-center justify-center gap-1.5 pb-4">
-        {slides.map((s, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrent(i)}
-            className={`rounded-full transition-all ${
-              i === current
-                ? `w-6 h-2 ${
-                    s.pick.product.productLine !== "macbookpro"
-                      ? "bg-sky-500"
-                      : "bg-amber-500"
-                  }`
-                : "w-2 h-2 bg-[var(--border)] hover:bg-[var(--border-hover)]"
-            }`}
-            aria-label={`Voir ${s.label}`}
-          />
-        ))}
-      </div>
-    </div>
+    </section>
   );
 }

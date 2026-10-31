@@ -1,397 +1,129 @@
 "use client";
 
 import {
-  formatScreenSize,
-} from "@/lib/product-catalog";
+  formatPrice,
+  getProductFootnote,
+  getProductStatus,
+  getShortTitle,
+  getSpecLine,
+  type ProductStatus,
+} from "@/lib/product-display";
 import type { Product } from "@/lib/types";
-import { Badge } from "./Badge";
 import { PriceSparkline } from "./PriceSparkline";
 
 interface ProductCardProps {
   product: Product;
-  dealScore?: number;
-  topLabel?: string;
-  topReasons?: string[];
-  isTopDeal?: boolean;
-  isTopDiscount?: boolean;
+  isTop?: boolean;
   isExpired?: boolean;
-  onShowHistory?: (product: Product) => void;
+  onOpen?: (product: Product) => void;
   canManageFavorite?: boolean;
   favoriteBusy?: boolean;
   onToggleFavorite?: () => void;
 }
 
-const COLOR_MAP: Record<string, { hex: string; label: string; textDark?: boolean }> = {
-  spacegray: { hex: "#7d7e80", label: "Gris sidéral", textDark: false },
-  spaceblack: { hex: "#393b3d", label: "Noir sidéral", textDark: false },
-  silver: { hex: "#c0c1c4", label: "Argent", textDark: true },
-  starlight: { hex: "#f3e7cf", label: "Lumière stellaire", textDark: true },
-  midnight: { hex: "#1f2937", label: "Minuit", textDark: false },
-  midnightblue: { hex: "#1f2937", label: "Minuit", textDark: false },
-  skyblue: { hex: "#c9e3f3", label: "Bleu ciel", textDark: true },
-  black: { hex: "#2b2b2d", label: "Noir", textDark: false },
-  white: { hex: "#f5f5f0", label: "Blanc", textDark: true },
-  pink: { hex: "#f4c6d4", label: "Rose", textDark: true },
-  teal: { hex: "#a8d5cf", label: "Bleu-vert", textDark: true },
-  ultramarine: { hex: "#5b6ee1", label: "Outremer", textDark: false },
-  blacktitanium: { hex: "#3c3c3d", label: "Titane noir", textDark: false },
-  whitetitanium: { hex: "#f0eeea", label: "Titane blanc", textDark: true },
-  naturaltitanium: { hex: "#bfb8ad", label: "Titane naturel", textDark: true },
-  deserttitanium: { hex: "#c7a98a", label: "Titane sable", textDark: true },
-  indigo: { hex: "#4b4f8a", label: "Indigo", textDark: false },
-  blush: { hex: "#f2d3cc", label: "Rose poudré", textDark: true },
-  blue: { hex: "#9fb8d6", label: "Bleu", textDark: true },
-  green: { hex: "#b9d3b0", label: "Vert", textDark: true },
-  yellow: { hex: "#f2e3a0", label: "Jaune", textDark: true },
-  purple: { hex: "#c8b8e0", label: "Mauve", textDark: true },
-  orange: { hex: "#f0b48a", label: "Orange", textDark: true },
-  citrus: { hex: "#e8e08a", label: "Citron", textDark: true },
+const STATUS_CLASSES: Record<NonNullable<ProductStatus>["kind"] | "top", string> = {
+  top: "bg-[var(--badge-top-bg)] text-[var(--badge-top-fg)]",
+  new: "bg-[var(--badge-new-bg)] text-[var(--badge-new-fg)]",
+  drop: "bg-[var(--badge-top-bg)] text-[var(--badge-top-fg)]",
+  rise: "bg-[var(--badge-muted-bg)] text-[var(--badge-muted-fg)]",
+  expired: "bg-[var(--badge-muted-bg)] text-[var(--badge-muted-fg)]",
 };
-
-export function getColorLabel(color: string) {
-  const key = color.trim().toLowerCase().replace(/[^a-z]/g, "");
-  return COLOR_MAP[key]?.label ?? color;
-}
 
 export function ProductCard({
   product,
-  dealScore,
-  topLabel,
-  topReasons = [],
-  isTopDeal = false,
-  isTopDiscount = false,
+  isTop = false,
   isExpired = false,
-  onShowHistory,
+  onOpen,
   canManageFavorite = false,
   favoriteBusy = false,
   onToggleFavorite,
 }: ProductCardProps) {
+  const status = getProductStatus(product, isExpired);
+  const badge = !isExpired && isTop ? { kind: "top" as const, label: "Meilleure affaire" } : status;
   const discountPercent = Math.round(product.savingsPercent);
-  const hasDiscount =
-    discountPercent >= 1 && product.currentPrice < product.originalPrice;
-  const screenLabel = formatScreenSize(product.screenSize);
-  const savingsAmount = product.originalPrice - product.currentPrice;
-  const colorKey = product.color.trim().toLowerCase().replace(/[^a-z]/g, "");
-  const colorInfo = colorKey ? COLOR_MAP[colorKey] ?? null : null;
-  const isTopAir = topLabel && product.productLine !== "macbookpro";
-  const topCardClasses = isTopAir
-    ? "ring-2 ring-sky-500 border-sky-500/30"
-    : "ring-2 ring-amber-500 border-amber-500/30";
-  const topTagClasses = isTopAir
-    ? "bg-sky-500 shadow-sm shadow-sky-500/30"
-    : "bg-amber-500 shadow-sm shadow-amber-500/30";
-  const seenAtDate = new Date(product.appearanceFirstSeen).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Europe/Paris",
-  });
-  const seenAtTime = new Date(product.appearanceFirstSeen).toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Paris",
-  });
-  const expiredAtDate = new Date(product.appearanceLastSeen).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Europe/Paris",
-  });
-  const expiredAtTime = new Date(product.appearanceLastSeen).toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Paris",
-  });
-  const appearanceLabel = `Vu le ${seenAtDate} ${seenAtTime}`;
-  const expirationLabel = isExpired
-    ? `Expiré le ${expiredAtDate} ${expiredAtTime}`
-    : null;
-  const appearanceCountLabel =
-    product.appearanceCount > 1
-      ? `${product.appearanceCount} apparitions`
-      : null;
-  const priceTrendTitle =
-    product.priceTrend === "down" && product.previousPrice !== null
-      ? `Prix en baisse depuis ${product.previousPrice.toLocaleString("fr-FR")} €`
-      : product.priceTrend === "up" && product.previousPrice !== null
-        ? `Prix en hausse depuis ${product.previousPrice.toLocaleString("fr-FR")} €`
-        : null;
+  const hasDiscount = discountPercent >= 1 && product.currentPrice < product.originalPrice;
+  const shortTitle = getShortTitle(product);
 
   return (
-    <div
-      className={`group flex flex-row sm:flex-col overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-[var(--shadow-sm)] transition-all duration-200 ease-out ${
-        isExpired
-          ? "border-[var(--border)] opacity-70"
-          : `hover:-translate-y-1 hover:shadow-[var(--shadow-md)] ${
-              topLabel
-                ? topCardClasses
-                : isTopDiscount
-                  ? "ring-2 ring-[var(--accent-green)] border-[var(--accent-green)]/30"
-                  : "border-[var(--border)] hover:border-[var(--border-hover)]"
-            }`
+    <article
+      className={`group relative flex flex-col gap-3 rounded-[18px] bg-[var(--surface)] p-4 transition-shadow hover:shadow-[var(--shadow-md)] ${
+        isExpired ? "opacity-60 hover:opacity-90" : ""
       }`}
     >
-      {/* Image */}
-      <div className="relative flex items-center justify-center bg-[var(--image-bg)] p-3 sm:p-4 w-24 sm:w-full shrink-0">
+      <div className="flex min-h-7 items-start justify-between">
+        {badge ? (
+          <span className={`rounded-md px-2 py-1 text-[11px] font-semibold ${STATUS_CLASSES[badge.kind]}`}>
+            {badge.label}
+          </span>
+        ) : (
+          <span />
+        )}
+        {canManageFavorite && onToggleFavorite ? (
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            disabled={favoriteBusy}
+            aria-label={product.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            aria-pressed={product.isFavorite}
+            className={`relative z-10 -m-1.5 rounded-full p-1.5 transition-colors disabled:cursor-wait disabled:opacity-60 ${
+              product.isFavorite ? "text-amber-500" : "text-[var(--text-tertiary)] hover:text-amber-500"
+            }`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill={product.isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
+              <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z" />
+            </svg>
+          </button>
+        ) : (
+          product.isFavorite && (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-amber-500" role="img" aria-label="Favori">
+              <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z" />
+            </svg>
+          )
+        )}
+      </div>
+
+      <div className="flex h-36 items-center justify-center rounded-[14px] bg-[var(--image-tile)]">
         <img
           src={product.imageUrl}
-          alt={product.title}
-          width={200}
-          height={200}
-          className={`h-20 sm:h-40 object-contain ${isExpired ? "grayscale opacity-60" : ""}`}
+          alt=""
+          className={`h-28 max-w-[80%] object-contain mix-blend-multiply ${isExpired ? "grayscale" : ""}`}
         />
-        <div className="absolute left-2 right-2 top-2 sm:left-3 sm:right-3 sm:top-3 flex items-start justify-between gap-2">
-          <div className="flex flex-wrap gap-1.5 max-w-[calc(100%-64px)]">
-            {isExpired ? (
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-neutral-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M15 9l-6 6M9 9l6 6" />
-                </svg>
-                Indisponible
-              </div>
-            ) : (
-              <>
-                {product.isNew && (
-                  <Badge variant="new">Nouveau</Badge>
-                )}
-                {product.isFavorite && (
-                  <Badge variant="favorite">Favori</Badge>
-                )}
-                {topLabel && (
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white ${topTagClasses}`}>
-                    {topLabel}
-                  </span>
-                )}
-                {isTopDeal && (
-                  <span className="inline-flex items-center rounded-full border border-zinc-900/10 bg-zinc-900/88 px-2 py-[5px] text-[11px] leading-none font-medium text-white shadow-sm shadow-zinc-900/12 dark:border-zinc-100/10 dark:bg-zinc-100/92 dark:text-[#1d1d1f] dark:shadow-zinc-100/10">
-                    Top Dev
-                  </span>
-                )}
-                {isTopDiscount && (
-                  <div className="inline-flex items-center rounded-full bg-emerald-500 px-2.5 py-[5px] text-[11px] leading-none font-semibold text-white dark:bg-emerald-400">
-                    Top Remise
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {canManageFavorite && onToggleFavorite && (
-              <button
-                type="button"
-                onClick={onToggleFavorite}
-                disabled={favoriteBusy}
-                className={`inline-flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur ${
-                  product.isFavorite
-                    ? "border-amber-500/25 bg-amber-500/12 text-amber-500"
-                    : "border-black/10 bg-white/70 text-[var(--text-secondary)] dark:border-white/10 dark:bg-black/25"
-                } transition-colors hover:text-amber-500 disabled:cursor-wait disabled:opacity-60`}
-                aria-label={
-                  product.isFavorite
-                    ? "Retirer des favoris"
-                    : "Ajouter aux favoris"
-                }
-                title={
-                  product.isFavorite
-                    ? "Retirer des favoris"
-                    : "Ajouter aux favoris"
-                }
-              >
-                {favoriteBusy ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill={product.isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                  </svg>
-                )}
-              </button>
-            )}
-            {!isExpired && hasDiscount && (
-              <div className="shrink-0">
-                <Badge variant="discount">-{discountPercent}%</Badge>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-3 sm:p-5 space-y-2.5 sm:space-y-3 min-w-0">
-        {/* Specs badges */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {product.chip && <Badge variant="chip">{product.chip}</Badge>}
-          <Badge variant="line">{product.productLineLabel}</Badge>
-          {colorInfo && (
-            <span
-              className={`inline-flex items-center px-2.5 py-[5px] rounded-full text-[11px] leading-none font-semibold border border-transparent ${
-                colorInfo.textDark ? "text-[#1d1d1f]" : "text-white"
-              }`}
-              style={{ backgroundColor: colorInfo.hex }}
-            >
-              {colorInfo.label}
-            </span>
-          )}
-        </div>
-
-        {/* Price */}
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-[var(--fg)]">
-              {product.currentPrice.toLocaleString("fr-FR")} €
-            </span>
-            {priceTrendTitle && (
-              <span
-                className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${
-                  product.priceTrend === "down"
-                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                }`}
-                title={priceTrendTitle}
-                aria-label={priceTrendTitle}
-              >
-                {product.priceTrend === "down" ? (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7 7h10v10" />
-                    <path d="M17 7 7 17" />
-                  </svg>
-                ) : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7 17h10V7" />
-                    <path d="m7 17 10-10" />
-                  </svg>
-                )}
-              </span>
-            )}
-          </div>
-          {hasDiscount && (
-            <span className="text-sm text-[var(--text-secondary)] line-through">
-              {product.originalPrice.toLocaleString("fr-FR")} €
-            </span>
-          )}
-        </div>
-
-        {/* Savings + Deal score */}
-        <div className="flex items-center justify-between">
-          <p className={`text-xs font-medium ${hasDiscount ? "text-emerald-500 dark:text-emerald-400" : "invisible"}`}>
-            Économisez {savingsAmount.toLocaleString("fr-FR")} €
-          </p>
-          {typeof dealScore === "number" && (
-            <span className="text-[11px] font-semibold text-[var(--text-tertiary)]" title="Score développeur : adéquation dev plus opportunité de prix">
-              Score {dealScore.toFixed(0)}
-            </span>
-          )}
-        </div>
-
-        <PriceSparkline prices={product.priceSeries} muted={isExpired} />
-
-        {topReasons.length > 0 && (
-          <div className="flex items-start gap-3 text-[11px]">
-            <p className="min-w-0 flex-1 line-clamp-2 text-[var(--text-secondary)]">
-              {topReasons.join(" · ")}
-            </p>
-            <span className="ml-auto shrink-0 whitespace-nowrap text-[var(--text-tertiary)]">
-              {appearanceLabel}
-              {expirationLabel ? ` · ${expirationLabel}` : ""}
-            </span>
-          </div>
-        )}
-
-        {!topReasons.length && (
-          <div className="flex text-[11px] text-[var(--text-tertiary)]">
-            <span className="ml-auto">
-              {appearanceLabel}
-              {expirationLabel ? ` · ${expirationLabel}` : ""}
-            </span>
-          </div>
-        )}
-
-        {/* Specs grid */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-          {product.memory && (
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
-                <rect x="2" y="6" width="20" height="12" rx="2" />
-                <path d="M6 6V4M10 6V4M14 6V4M18 6V4" />
-              </svg>
-              <span className="text-xs font-semibold">{product.memory.toUpperCase()}</span>
-            </div>
-          )}
-          {product.cpuCores && (
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
-                <rect x="7" y="7" width="10" height="10" rx="1.5" />
-                <path d="M9 2v3M15 2v3M9 19v3M15 19v3M19 9h3M19 15h3M2 9h3M2 15h3" />
-              </svg>
-              <span className="text-xs font-semibold">CPU {product.cpuCores} cœurs</span>
-            </div>
-          )}
-          {product.storage && (
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <path d="M3 9h18M9 3v18" />
-              </svg>
-              <span className="text-xs font-semibold">{product.storage.toUpperCase()}</span>
-            </div>
-          )}
-          {product.gpuCores && (
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
-                <rect x="4" y="6" width="16" height="10" rx="2" />
-                <path d="M8 18h8M12 16v2" />
-                <path d="M8 10h.01M12 10h.01M16 10h.01" />
-              </svg>
-              <span className="text-xs font-semibold">GPU {product.gpuCores} cœurs</span>
-            </div>
-          )}
-          {screenLabel && (
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
-                <rect x="2" y="3" width="20" height="14" rx="2" />
-                <path d="M8 21h8M12 17v4" />
-              </svg>
-              <span className="text-xs font-semibold">{screenLabel}</span>
-            </div>
-          )}
-          {product.releaseYear && (
-            <div className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-tertiary)] shrink-0">
-                <rect x="3" y="4" width="18" height="18" rx="2" />
-                <path d="M16 2v4M8 2v4M3 10h18" />
-              </svg>
-              <span className="text-xs font-semibold">{product.releaseYear}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="space-y-2 pt-1">
-          {isExpired ? (
-            <div className="block w-full rounded-full bg-neutral-400 dark:bg-neutral-600 px-4 py-2.5 text-center text-sm font-medium text-white cursor-default">
-              Plus disponible
-            </div>
-          ) : (
-            <a
-              href={product.productUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full rounded-full bg-[#0071e3] px-4 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-[#0077ed] dark:bg-[#2997ff] dark:hover:bg-[#40a9ff]"
-            >
-              Voir sur Apple
-            </a>
-          )}
-          {onShowHistory && (
+      <div className="flex flex-col gap-1">
+        <h3 className="text-base font-semibold leading-snug">
+          {onOpen ? (
             <button
               type="button"
-              onClick={() => onShowHistory(product)}
-              className="w-full text-center text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-blue)]"
+              onClick={() => onOpen(product)}
+              title={product.title}
+              className="text-left after:absolute after:inset-0 after:rounded-[18px] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-[var(--accent-blue)]"
             >
-              Détail et historique{appearanceCountLabel ? ` · ${appearanceCountLabel}` : ""}
+              {shortTitle}
             </button>
+          ) : (
+            shortTitle
           )}
-        </div>
+        </h3>
+        <p className="text-[13px] text-[var(--text-secondary)]">{getSpecLine(product)}</p>
       </div>
-    </div>
+
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <span className="text-xl font-semibold tabular-nums">{formatPrice(product.currentPrice)}</span>
+        {hasDiscount && (
+          <>
+            <span className="text-[13px] text-[var(--text-secondary)] line-through">
+              {formatPrice(product.originalPrice)}
+            </span>
+            <span className="text-[13px] font-semibold text-[var(--accent-blue)]">−{discountPercent} %</span>
+          </>
+        )}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-2">
+        <PriceSparkline prices={product.priceSeries} muted={isExpired} />
+        <p className="text-xs text-[var(--text-secondary)]">{getProductFootnote(product, isExpired)}</p>
+      </div>
+    </article>
   );
 }

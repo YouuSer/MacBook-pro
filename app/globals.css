@@ -21,6 +21,13 @@
   --tooltip-bg: #ffffff;
   --tooltip-border: #d2d2d7;
   --chart-axis: #86868b;
+  --image-tile: #f5f5f7;
+  --badge-new-bg: #e3f5e8;
+  --badge-new-fg: #1b6e34;
+  --badge-top-bg: #fff1e0;
+  --badge-top-fg: #8a4100;
+  --badge-muted-bg: #ededf0;
+  --badge-muted-fg: #55555a;
 }
 
 [data-theme="dark"] {
@@ -44,6 +51,13 @@
   --tooltip-bg: #1c1c1e;
   --tooltip-border: #38383a;
   --chart-axis: #636366;
+  --image-tile: #e8e8ed;
+  --badge-new-bg: rgba(48, 209, 88, 0.16);
+  --badge-new-fg: #4cd97b;
+  --badge-top-bg: rgba(255, 159, 10, 0.16);
+  --badge-top-fg: #ffb340;
+  --badge-muted-bg: #2c2c2e;
+  --badge-muted-fg: #a1a1a6;
 }
 
 body {
