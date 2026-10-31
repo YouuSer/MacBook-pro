@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildFacetOptions,
   createDefaultFilterState,
+  matchesQuery,
   parseFilterState,
   serializeFilterState,
 } from "../lib/catalog-filters";
+import { buildCatalogStats, buildFamilyGroups } from "../lib/catalog-view";
 import { matchesFavoriteConfig, buildFavoriteConfigKey } from "../lib/favorites";
 import {
   getCategoryForProductLine,
@@ -83,6 +85,7 @@ function makeProduct(overrides: Partial<Product>): Product {
     currentPrice: 1000,
     previousPrice: null,
     priceTrend: null,
+    priceSeries: [],
     appearanceCount: 1,
     appearanceFirstSeen: "2026-01-01T00:00:00.000Z",
     appearanceLastSeen: "2026-01-01T00:00:00.000Z",
@@ -137,6 +140,7 @@ describe("historical facets", () => {
     const state = createDefaultFilterState("iphone");
     state.facets.storages = ["256GB"];
     state.includeExpired = false;
+    state.query = "M4 Pro";
 
     expect(parseFilterState(serializeFilterState(state))).toEqual(state);
   });
@@ -158,5 +162,61 @@ describe("legacy favorites", () => {
     const legacyKey = buildFavoriteConfigKey(product).replace(/^macbookpro\|/, "pro|");
 
     expect(matchesFavoriteConfig(product, legacyKey)).toBe(true);
+  });
+});
+
+describe("search", () => {
+  const product = makeProduct({
+    title: "MacBook Pro 14 pouces avec puce Apple M4 Pro, CPU 12 cœurs",
+    chip: "M4 Pro",
+    memory: "24gb",
+  });
+
+  it("matches every typed word, ignoring accents and capacity spacing", () => {
+    expect(matchesQuery(product, "m4 pro 24 Go")).toBe(true);
+    expect(matchesQuery(product, "coeurs")).toBe(true);
+    expect(matchesQuery(product, "M4 Max")).toBe(false);
+    expect(matchesQuery(product, "m4")).toBe(true);
+    expect(matchesQuery(makeProduct({ chip: "M4", title: "MacBook Pro avec puce Apple M4" }), "M4 Pro")).toBe(false);
+    expect(matchesQuery(product, "  ")).toBe(true);
+  });
+});
+
+describe("catalog view", () => {
+  const available = [
+    makeProduct({ partNumber: "A", productLine: "macbookair", productLineLabel: "MacBook Air", isNew: true }),
+    makeProduct({ partNumber: "B", priceTrend: "down", isFavorite: true }),
+    makeProduct({ partNumber: "C", category: "iphone", productLine: "iphone16", productLineLabel: "iPhone 16" }),
+  ];
+  const expired = [makeProduct({ partNumber: "D", chip: "M3 Pro" })];
+
+  it("groups by family in Apple order with expired offers apart", () => {
+    const groups = buildFamilyGroups({
+      available,
+      expired,
+      filters: createDefaultFilterState("mac"),
+      dealInsights: new Map(),
+    });
+
+    expect(groups.map((group) => [group.label, group.available.length, group.expired.length])).toEqual([
+      ["MacBook Air", 1, 0],
+      ["MacBook Pro", 1, 1],
+    ]);
+  });
+
+  it("hides expired offers when asked", () => {
+    const filters = { ...createDefaultFilterState("mac"), includeExpired: false };
+    const groups = buildFamilyGroups({ available, expired, filters, dealInsights: new Map() });
+
+    expect(groups.flatMap((group) => group.expired)).toEqual([]);
+  });
+
+  it("summarises the active category", () => {
+    expect(buildCatalogStats(available, "mac")).toEqual({
+      available: 2,
+      newToday: 1,
+      priceDrops: 1,
+      favoritesAvailable: 1,
+    });
   });
 });

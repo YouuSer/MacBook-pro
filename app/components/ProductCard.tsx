@@ -5,6 +5,7 @@ import {
 } from "@/lib/product-catalog";
 import type { Product } from "@/lib/types";
 import { Badge } from "./Badge";
+import { PriceSparkline } from "./PriceSparkline";
 
 interface ProductCardProps {
   product: Product;
@@ -282,6 +283,8 @@ export function ProductCard({
           )}
         </div>
 
+        <PriceSparkline prices={product.priceSeries} muted={isExpired} />
+
         {topReasons.length > 0 && (
           <div className="flex items-start gap-3 text-[11px]">
             <p className="min-w-0 flex-1 line-clamp-2 text-[var(--text-secondary)]">
@@ -384,7 +387,7 @@ export function ProductCard({
               onClick={() => onShowHistory(product)}
               className="w-full text-center text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-blue)]"
             >
-              Historique des prix{appearanceCountLabel ? ` · ${appearanceCountLabel}` : ""}
+              Détail et historique{appearanceCountLabel ? ` · ${appearanceCountLabel}` : ""}
             </button>
           )}
         </div>

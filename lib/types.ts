@@ -77,6 +77,7 @@ export interface Product {
   currentPrice: number;
   previousPrice: number | null;
   priceTrend: PriceTrend | null;
+  priceSeries: number[];
   appearanceCount: number;
   appearanceFirstSeen: string;
   appearanceLastSeen: string;

@@ -185,6 +185,7 @@ export function buildProducts(args: {
       currentPrice: row.currentPrice,
       previousPrice,
       priceTrend: getPriceTrend(row.currentPrice, previousPrice),
+      priceSeries: priceHistoryForProduct.map((entry) => entry.price).slice(-20),
       appearanceCount: appearanceStats.appearanceCount,
       appearanceFirstSeen: appearanceStats.appearanceFirstSeen,
       appearanceLastSeen: appearanceStats.appearanceLastSeen,

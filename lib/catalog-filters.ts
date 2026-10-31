@@ -4,6 +4,7 @@ import {
   formatScreenSize,
   getCategoryDefinition,
   normalizeScreenSize,
+  parseChip,
   type Category,
   type FilterKey,
 } from "./product-catalog";
@@ -49,6 +50,7 @@ export interface CatalogFilterState {
   favoritesOnly: boolean;
   includeExpired: boolean;
   sort: SortOption;
+  query: string;
 }
 
 export interface FacetOption {
@@ -92,6 +94,7 @@ export function createDefaultFilterState(category: Category = "mac"): CatalogFil
     favoritesOnly: false,
     includeExpired: true,
     sort: "best-deal",
+    query: "",
   };
 }
 
@@ -159,12 +162,58 @@ function sortFacetValues(key: FacetKey, values: string[]) {
   }
 }
 
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/œ/g, "oe")
+    .replace(/(\d)\s*(go|gb)\b/g, "$1go")
+    .replace(/(\d)\s*(to|tb)\b/g, "$1to");
+}
+
+// Recherche plein texte : chaque mot saisi doit apparaître dans le titre ou les specs.
+export function matchesQuery(product: Product, query: string) {
+  // Une puce saisie (« M4 Pro ») se compare à la puce du produit, pas au titre : sinon
+  // le « Pro » de « MacBook Pro » ferait remonter les M4 simples.
+  const chip = parseChip(query);
+  let rest = query;
+
+  if (chip) {
+    const productChip = product.chip.toUpperCase();
+    const wanted = chip.toUpperCase();
+    const chipMatches = chip.includes(" ") ? productChip === wanted : productChip.split(" ")[0] === wanted;
+
+    if (!chipMatches) {
+      return false;
+    }
+
+    rest = query.replace(new RegExp(chip.replace(" ", "\\s+"), "i"), " ");
+  }
+
+  const tokens = normalizeSearchText(rest).split(/\s+/).filter(Boolean);
+
+  if (tokens.length === 0) {
+    return true;
+  }
+
+  const haystack = normalizeSearchText(
+    [product.title, product.productLineLabel, product.chip, product.memory, product.storage, product.partNumber].join(" ")
+  );
+
+  return tokens.every((token) => haystack.includes(token));
+}
+
 export function matchesFacets(
   product: Product,
-  state: Pick<CatalogFilterState, "facets" | "favoritesOnly">,
+  state: Pick<CatalogFilterState, "facets" | "favoritesOnly"> & { query?: string },
   ignore?: FacetKey
 ) {
   if (state.favoritesOnly && !product.isFavorite) {
+    return false;
+  }
+
+  if (state.query && !matchesQuery(product, state.query)) {
     return false;
   }
 
@@ -245,6 +294,7 @@ export function serializeFilterState(state: CatalogFilterState): string {
   if (state.favoritesOnly) params.set("fav", "1");
   if (!state.includeExpired) params.set("expired", "0");
   if (state.sort !== "best-deal") params.set("sort", state.sort);
+  if (state.query.trim()) params.set("q", state.query);
 
   return params.toString();
 }
@@ -263,6 +313,7 @@ export function parseFilterState(search: string): CatalogFilterState {
 
   state.favoritesOnly = params.get("fav") === "1";
   state.includeExpired = params.get("expired") !== "0";
+  state.query = params.get("q") ?? "";
 
   const sort = params.get("sort");
   if (SORT_OPTIONS.some((option) => option.value === sort)) {

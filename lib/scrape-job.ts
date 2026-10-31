@@ -445,6 +445,17 @@ export async function runScrapeJob() {
 
     for (const row of stillAvailable) {
       await db.update(products).set({ lastSeen: now }).where(eq(products.partNumber, row.partNumber));
+
+      const [lastEntry] = await db
+        .select({ id: priceHistory.id })
+        .from(priceHistory)
+        .where(eq(priceHistory.partNumber, row.partNumber))
+        .orderBy(desc(priceHistory.lastSeenAt))
+        .limit(1);
+
+      if (lastEntry) {
+        await db.update(priceHistory).set({ lastSeenAt: now }).where(eq(priceHistory.id, lastEntry.id));
+      }
     }
   }
 
