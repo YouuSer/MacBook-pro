@@ -11,6 +11,7 @@ import {
 } from "./schema";
 import { scrapeAppleRefurb } from "./scraper";
 import { desc, eq } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import {
   buildAlertWebhookRequest,
   getAlertCandidateForScrapedProduct,
@@ -31,6 +32,9 @@ import {
 } from "./favorites";
 import type { ScrapedProduct } from "./scraper";
 import { resolveCategory, resolveProductLine } from "./product-catalog";
+
+// Écritures envoyées par lots pour tenir dans la durée maximale d'une fonction Netlify.
+const WRITE_BATCH_SIZE = 200;
 
 async function loadActiveAlertRules() {
   const db = getDb();
@@ -356,6 +360,16 @@ export async function runScrapeJob() {
   const lastSuccessfulScrapedAt = lastSuccessfulRun[0]?.scrapedAt ?? null;
 
   let newCount = 0;
+  // Dernière ligne d'historique de chaque produit, chargée en une requête : la fonction Netlify
+  // est limitée en durée, on évite donc tout aller-retour Turso par produit.
+  const latestHistory = new Map<string, { id: number; price: number }>();
+  for (const entry of await db
+    .select({ id: priceHistory.id, partNumber: priceHistory.partNumber, price: priceHistory.price })
+    .from(priceHistory)
+    .orderBy(priceHistory.lastSeenAt)) {
+    latestHistory.set(entry.partNumber, { id: entry.id, price: entry.price });
+  }
+  const writes: BatchItem<"sqlite">[] = [];
 
   for (const p of scraped) {
     const exists = existingMap.get(p.partNumber);
@@ -370,76 +384,55 @@ export async function runScrapeJob() {
       alertCandidates.push(alertCandidate);
     }
 
+    const values = {
+      title: p.title,
+      currentPrice: p.currentPrice,
+      originalPrice: p.originalPrice,
+      savingsPercent: p.savingsPercent,
+      savings: p.savings,
+      category: p.category,
+      productLine: p.productLine,
+      productLineLabel: p.productLineLabel || null,
+      chip: p.chip,
+      screenSize: p.screenSize,
+      memory: p.memory,
+      storage: p.storage,
+      color: p.color,
+      releaseYear: p.releaseYear,
+      productUrl: p.productUrl,
+      imageUrl: p.imageUrl,
+      lastSeen: now,
+    };
+
     if (exists) {
-      await db
-        .update(products)
-        .set({
-          title: p.title,
-          currentPrice: p.currentPrice,
-          originalPrice: p.originalPrice,
-          savingsPercent: p.savingsPercent,
-          savings: p.savings,
-          category: p.category,
-          productLine: p.productLine,
-          productLineLabel: p.productLineLabel || null,
-          chip: p.chip,
-          screenSize: p.screenSize,
-          memory: p.memory,
-          storage: p.storage,
-          color: p.color,
-          releaseYear: p.releaseYear,
-          productUrl: p.productUrl,
-          imageUrl: p.imageUrl,
-          lastSeen: now,
-          ...(isReappearing ? { firstSeen: now } : {}),
-        })
-        .where(eq(products.partNumber, p.partNumber));
+      writes.push(
+        db
+          .update(products)
+          .set({ ...values, ...(isReappearing ? { firstSeen: now } : {}) })
+          .where(eq(products.partNumber, p.partNumber))
+      );
     } else {
-      await db.insert(products).values({
-        partNumber: p.partNumber,
-        title: p.title,
-        currentPrice: p.currentPrice,
-        originalPrice: p.originalPrice,
-        savingsPercent: p.savingsPercent,
-        savings: p.savings,
-        category: p.category,
-        productLine: p.productLine,
-        productLineLabel: p.productLineLabel || null,
-        chip: p.chip,
-        screenSize: p.screenSize,
-        memory: p.memory,
-        storage: p.storage,
-        color: p.color,
-        releaseYear: p.releaseYear,
-        productUrl: p.productUrl,
-        imageUrl: p.imageUrl,
-        firstSeen: now,
-        lastSeen: now,
-      });
+      writes.push(db.insert(products).values({ ...values, partNumber: p.partNumber, firstSeen: now }));
       newCount++;
     }
 
     // Consolidate price history: update lastSeenAt if price unchanged, otherwise insert new row
     // Si réapparition après expiration, toujours créer une nouvelle ligne (date de fin figée)
-    const lastEntry = await db
-      .select()
-      .from(priceHistory)
-      .where(eq(priceHistory.partNumber, p.partNumber))
-      .orderBy(desc(priceHistory.lastSeenAt))
-      .limit(1);
+    const lastEntry = latestHistory.get(p.partNumber);
 
-    if (!isReappearing && lastEntry.length > 0 && lastEntry[0].price === p.currentPrice) {
-      await db
-        .update(priceHistory)
-        .set({ lastSeenAt: now })
-        .where(eq(priceHistory.id, lastEntry[0].id));
+    if (!isReappearing && lastEntry && lastEntry.price === p.currentPrice) {
+      writes.push(
+        db.update(priceHistory).set({ lastSeenAt: now }).where(eq(priceHistory.id, lastEntry.id))
+      );
     } else {
-      await db.insert(priceHistory).values({
-        partNumber: p.partNumber,
-        price: p.currentPrice,
-        firstSeenAt: now,
-        lastSeenAt: now,
-      });
+      writes.push(
+        db.insert(priceHistory).values({
+          partNumber: p.partNumber,
+          price: p.currentPrice,
+          firstSeenAt: now,
+          lastSeenAt: now,
+        })
+      );
     }
   }
 
@@ -454,19 +447,20 @@ export async function runScrapeJob() {
     );
 
     for (const row of stillAvailable) {
-      await db.update(products).set({ lastSeen: now }).where(eq(products.partNumber, row.partNumber));
+      writes.push(db.update(products).set({ lastSeen: now }).where(eq(products.partNumber, row.partNumber)));
 
-      const [lastEntry] = await db
-        .select({ id: priceHistory.id })
-        .from(priceHistory)
-        .where(eq(priceHistory.partNumber, row.partNumber))
-        .orderBy(desc(priceHistory.lastSeenAt))
-        .limit(1);
-
+      const lastEntry = latestHistory.get(row.partNumber);
       if (lastEntry) {
-        await db.update(priceHistory).set({ lastSeenAt: now }).where(eq(priceHistory.id, lastEntry.id));
+        writes.push(
+          db.update(priceHistory).set({ lastSeenAt: now }).where(eq(priceHistory.id, lastEntry.id))
+        );
       }
     }
+  }
+
+  for (let index = 0; index < writes.length; index += WRITE_BATCH_SIZE) {
+    const chunk = writes.slice(index, index + WRITE_BATCH_SIZE);
+    await db.batch(chunk as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
   }
 
   await db.insert(scrapeRuns).values({

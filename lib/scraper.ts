@@ -136,15 +136,35 @@ export function parseBootstrapTiles(
   });
 }
 
+const FETCH_ATTEMPTS = 3;
+const FETCH_TIMEOUT_MS = 8000;
+
+// Apple coupe parfois la connexion (« fetch failed ») : on retente avant de déclarer la catégorie en échec.
+async function fetchWithRetry(url: string) {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+    try {
+      return await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          "Accept-Language": "fr-FR,fr;q=0.9",
+        },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+  }
+
+  throw lastError;
+}
+
 async function scrapeCategory(category: Category, path: string): Promise<CategoryScrapeResult> {
   try {
-    const res = await fetch(`${REFURB_BASE_URL}/${path}`, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        "Accept-Language": "fr-FR,fr;q=0.9",
-      },
-    });
+    const res = await fetchWithRetry(`${REFURB_BASE_URL}/${path}`);
 
     if (!res.ok) {
       throw new Error(`Apple returned ${res.status}: ${res.statusText}`);
