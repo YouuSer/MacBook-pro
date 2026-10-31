@@ -110,7 +110,7 @@ export function DetailPanel({ target, onClose }: DetailPanelProps) {
                   </div>
                   <div className="rounded-2xl bg-[var(--surface-secondary)] px-3 py-3">
                     <dt className="text-[11px] text-[var(--text-secondary)]">Première</dt>
-                    <dd className="mt-1 text-sm font-semibold">{formatDate(product.firstSeen)}</dd>
+                    <dd className="mt-1 text-sm font-semibold">{formatDate(product.appearanceFirstSeen)}</dd>
                   </div>
                   <div className="rounded-2xl bg-[var(--surface-secondary)] px-3 py-3">
                     <dt className="text-[11px] text-[var(--text-secondary)]">Dernière</dt>
